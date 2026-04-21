@@ -1928,6 +1928,8 @@
         var paymentMax = opts.paymentMax || 1500000;
         var currentPv = Math.max(0, Math.round(pvLimit || 0));
         var rows = [];
+        var pvDownValue = null;
+        var epDownValue = null;
 
         function bestOnCurrentPool(testPayment, testPv) {
           return pickBestByPv(buildScenariosForMfcPool(poolCurrent, mfc, testPayment, bonus, layout, matCap), testPv);
@@ -1942,11 +1944,13 @@
             var pvDown = Math.ceil(bestCurrentNoPv.finalPv);
             var sPvDown = bestOnCurrentPool(payment, pvDown);
             if (sPvDown) {
+              pvDownValue = pvDown;
               rows.push({
                 label: "Рекомендация по уменьшению ПВ",
                 kind: "decrease",
+                decreaseMode: "single-pv",
                 epValue: payment,
-                pvValue: pvDown,
+                pvValue: Math.ceil(sPvDown.finalPv),
                 scenario: sPvDown
               });
             }
@@ -1955,14 +1959,46 @@
             var epDown = minPaymentForPoolAtPv(poolCurrent, mfc, 1, payment, currentPv, bonus, layout, matCap);
             if (epDown && epDown.payment + 1e-9 < payment) {
               if (epDown.scenario) {
+                epDownValue = epDown.payment;
                 rows.push({
                   label: "Рекомендация по уменьшению ЕП",
                   kind: "decrease",
+                  decreaseMode: "single-ep",
                   epValue: epDown.payment,
                   pvValue: currentPv,
                   scenario: epDown.scenario
                 });
               }
+            }
+          }
+          if (currentPv > 0 && payment > 1 && Number.isFinite(pvDownValue) && Number.isFinite(epDownValue)) {
+            var comboAlphas = [0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 1];
+            var comboRank = 0;
+            var comboSeen = Object.create(null);
+            for (var comboIdx = 0; comboIdx < comboAlphas.length; comboIdx++) {
+              if (comboRank >= 3) break;
+              var alpha = comboAlphas[comboIdx];
+              var comboEp = Math.round(payment + (epDownValue - payment) * alpha);
+              var comboPv = Math.round(currentPv + (pvDownValue - currentPv) * alpha);
+              if (comboEp + 1e-9 >= payment) continue;
+              if (comboPv + 1e-9 >= currentPv) continue;
+              if (comboEp < 1 || comboPv < 0) continue;
+              var comboScenario = bestOnCurrentPool(comboEp, comboPv);
+              if (!comboScenario) continue;
+              var comboPvActual = Math.round(comboScenario.finalPv);
+              if (comboPvActual + 1e-9 >= currentPv) continue;
+              var comboKey = Math.round(comboEp) + "|" + comboPvActual;
+              if (comboSeen[comboKey]) continue;
+              comboSeen[comboKey] = true;
+              comboRank += 1;
+              rows.push({
+                label: "Рекомендация по одновременному уменьшению ЕП и ПВ (вариант " + comboRank + ")",
+                kind: "decrease",
+                decreaseMode: "combo",
+                epValue: comboEp,
+                pvValue: Math.ceil(comboScenario.finalPv),
+                scenario: comboScenario
+              });
             }
           }
         }
@@ -2051,8 +2087,21 @@
           });
         }
         var normalized = normalizeRecoRows(rows, payment, currentPv);
+        var decreaseEp = normalized.find(function (r) {
+          return r.kind === "decrease" && r.decreaseMode === "single-ep";
+        }) || null;
+        var decreasePv = normalized.find(function (r) {
+          return r.kind === "decrease" && r.decreaseMode === "single-pv";
+        }) || null;
+        var decreaseCombos = normalized.filter(function (r) {
+          return r.kind === "decrease" && r.decreaseMode === "combo";
+        }).slice(0, 3);
+        var decreaseRows = [];
+        if (decreaseEp) decreaseRows.push(decreaseEp);
+        if (decreasePv) decreaseRows.push(decreasePv);
+        decreaseRows = decreaseRows.concat(decreaseCombos);
         return {
-          decreaseRows: normalized.filter(function (r) { return r.kind === "decrease"; }).slice(0, 2),
+          decreaseRows: decreaseRows,
           increaseRows: normalized.filter(function (r) { return r.kind !== "decrease"; }).slice(0, 8)
         };
       }
