@@ -1,0 +1,2960 @@
+﻿
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Калькулятор Формула кц</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:#0c2340;
+      --ink-soft:#28496f;
+      --muted:#6f86a5;
+      --line:#d9e6f8;
+      --line-strong:#bfd6f3;
+      --acc:#2f95ff;
+      --acc2:#1468c8;
+      --acc3:#7ec8ff;
+      --ok:#117d43;
+      --bad:#c63232;
+      --glass-bg:rgba(255,255,255,.72);
+      --card-shadow:0 24px 52px rgba(15,40,72,.14), 0 2px 10px rgba(12,35,64,.06);
+      --card-shadow-strong:0 26px 58px rgba(13,44,79,.2), 0 6px 18px rgba(17,67,122,.14);
+    }
+    * { box-sizing:border-box; }
+    html, body {
+      margin:0;
+      padding:0;
+      overflow-x:hidden;
+      color-scheme:light;
+    }
+    body {
+      font-family:"Manrope","Segoe UI",sans-serif;
+      color:var(--ink);
+      min-height:100vh;
+      background:
+        radial-gradient(1200px 620px at 9% -10%, rgba(116,194,255,.35) 0%, rgba(116,194,255,0) 62%),
+        radial-gradient(900px 540px at 90% 6%, rgba(145,211,255,.30) 0%, rgba(145,211,255,0) 64%),
+        linear-gradient(162deg,#f6fbff 0%,#edf5ff 44%,#eaf2ff 100%);
+      background-size:100% 100%;
+      animation:none;
+    }
+    body::before, body::after {
+      content:"";
+      position:fixed;
+      pointer-events:none;
+      z-index:-1;
+      border-radius:999px;
+      filter:blur(2px);
+    }
+    body::before {
+      width:520px; height:520px;
+      left:-180px; top:-190px;
+      background:radial-gradient(circle at 30% 30%, rgba(94,179,255,.35), rgba(94,179,255,0) 66%);
+      animation:blobFloatA 16s ease-in-out infinite;
+    }
+    body::after {
+      width:600px; height:600px;
+      right:-210px; bottom:-240px;
+      background:radial-gradient(circle at 65% 45%, rgba(23,118,214,.25), rgba(23,118,214,0) 70%);
+      animation:blobFloatB 21s ease-in-out infinite;
+    }
+    .page {
+      width:100%;
+      max-width:1880px;
+      margin:0 auto;
+      padding:clamp(14px,1.8vw,28px);
+      display:grid;
+      gap:14px;
+    }
+    .hero,.card {
+      border:1px solid var(--line);
+      border-radius:20px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.90) 0%, rgba(247,252,255,.84) 44%, rgba(229,244,255,.92) 100%);
+      backdrop-filter:blur(10px);
+      box-shadow:var(--card-shadow);
+      position:relative;
+      overflow:hidden;
+      transition:transform .34s cubic-bezier(.2,.7,.2,1), box-shadow .34s ease, border-color .34s ease;
+    }
+    .hero:hover {
+      transform:translateY(-2px);
+      box-shadow:var(--card-shadow-strong);
+      border-color:#b8d5f7;
+    }
+    .hero::before {
+      content:"";
+      position:absolute;
+      inset:-24% -8%;
+      background:
+        radial-gradient(560px 260px at 8% 86%, rgba(255,238,223,.30) 0%, rgba(255,238,223,0) 70%),
+        radial-gradient(760px 300px at 92% 16%, rgba(206,229,255,.26) 0%, rgba(206,229,255,0) 66%);
+      transform:none;
+      animation:none;
+      pointer-events:none;
+      border-radius:inherit;
+    }
+    .hero::after {
+      content:"";
+      position:absolute;
+      inset:-1px;
+      border-radius:inherit;
+      padding:1px;
+      background:linear-gradient(122deg, rgba(169,214,255,.7), rgba(255,255,255,.2) 42%, rgba(157,203,255,.55) 100%);
+      -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;
+      mask-composite:exclude;
+      pointer-events:none;
+    }
+    .card::before,.card::after {
+      content:none;
+    }
+    .hero {
+      padding:44px 48px;
+      background:
+        radial-gradient(920px 300px at -6% 100%, rgba(255,240,224,.24) 0%, rgba(255,240,224,0) 60%),
+        radial-gradient(920px 320px at 104% 12%, rgba(201,226,252,.36) 0%, rgba(201,226,252,0) 64%),
+        linear-gradient(90deg, #ffffff 0%, #fbfdff 58%, #f0f7ff 100%);
+      border-color:#e3eefc;
+      box-shadow:0 20px 42px rgba(18,58,102,.12), 0 2px 8px rgba(14,42,72,.06);
+    }
+    .hero h1 {
+      margin:0;
+      font-family:"Manrope","Sora",sans-serif;
+      font-size:clamp(37px,3.8vw,68px);
+      line-height:.92;
+      font-weight:800;
+      letter-spacing:-.045em;
+      color:#061845;
+      text-shadow:none;
+    }
+    .tabs { display:none; }
+    .tab-btn {
+      position:relative;
+      width:auto;
+      flex:1 1 0;
+      min-width:260px;
+      border:1px solid #c7dbf5;
+      border-radius:14px;
+      padding:11px 16px;
+      min-height:46px;
+      background:linear-gradient(180deg,#ffffff 0%,#f4f9ff 100%);
+      color:#31547b;
+      font-family:"Sora","Manrope",sans-serif;
+      font-size:12px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      cursor:pointer;
+      white-space:nowrap;
+      transition:all .18s ease;
+      overflow:hidden;
+    }
+    .tab-btn::before {
+      content:"";
+      position:absolute;
+      inset:auto 14px 0 14px;
+      height:3px;
+      border-radius:999px;
+      background:linear-gradient(90deg, rgba(47,149,255,0) 0%, rgba(47,149,255,.45) 50%, rgba(47,149,255,0) 100%);
+      opacity:.35;
+      transform:translateY(2px);
+      transition:opacity .2s ease, transform .2s ease;
+      pointer-events:none;
+    }
+    .tab-btn:hover {
+      border-color:#9ec6f5;
+      transform:translateY(-2px);
+      box-shadow:0 10px 22px rgba(22,89,170,.15);
+    }
+    .tab-btn:hover::before {
+      opacity:.75;
+      transform:translateY(0);
+    }
+    .tab-btn.active {
+      border-color:#66acef;
+      color:#0c3b6d;
+      background:
+        linear-gradient(180deg,#eef7ff 0%,#d9ecff 100%);
+      box-shadow:0 10px 22px rgba(19,94,177,.2);
+      animation:activePulse 3.4s ease-in-out infinite;
+    }
+    .tab-btn.active::before {
+      opacity:1;
+      transform:translateY(0);
+      background:linear-gradient(90deg, rgba(47,149,255,.15) 0%, rgba(47,149,255,.95) 50%, rgba(47,149,255,.15) 100%);
+    }
+    .card {
+      padding:16px;
+      display:none;
+      gap:14px;
+      backdrop-filter:none;
+      -webkit-backdrop-filter:none;
+      transform:none !important;
+    }
+    .card.active {
+      display:grid;
+      animation:panelFade .18s ease-out;
+    }
+    .card.active > * {
+      opacity:1;
+      transform:none;
+      animation:none;
+    }
+    .grid { display:grid; gap:11px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); align-items:end; }
+    .prices {
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:linear-gradient(164deg, rgba(255,255,255,.82) 0%, rgba(241,248,255,.9) 100%);
+      padding:12px;
+      display:grid;
+      gap:8px;
+      grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    }
+    .prices h3 {
+      margin:0 0 2px;
+      grid-column:1 / -1;
+      font-size:12px;
+      font-family:"Sora","Manrope",sans-serif;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#214b7a;
+    }
+    .prices-head {
+      grid-column:1 / -1;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .prices-head h3 {
+      grid-column:auto;
+      margin:0;
+    }
+    .prices.fixed-prices {
+      padding:8px 10px;
+      gap:6px;
+      grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+    }
+    .prices.fixed-prices h3 {
+      margin-bottom:0;
+      font-size:11px;
+    }
+    .prices.fixed-prices .check-pill {
+      min-height:34px;
+      padding:6px 10px;
+      font-size:12px;
+    }
+    .prices.fixed-prices .row {
+      gap:4px;
+    }
+    .prices.fixed-prices label {
+      font-size:9px;
+      letter-spacing:.08em;
+    }
+    .fixed-price {
+      min-height:34px !important;
+      padding:6px 9px !important;
+      font-size:12px !important;
+      font-weight:700 !important;
+      color:#22486f !important;
+      background:linear-gradient(180deg,#f5faff 0%,#edf5ff 100%) !important;
+      cursor:default;
+    }
+    .row { display:grid; gap:6px; min-width:0; }
+    .grid > .row { min-width:0; }
+    label {
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      color:#5b7393;
+      font-weight:800;
+    }
+    input:not([type="checkbox"]):not([type="radio"]),select,button {
+      width:100%;
+      min-height:44px;
+      border:1px solid #bfd2eb;
+      border-radius:12px;
+      padding:9px 12px;
+      font:inherit;
+      font-size:14px;
+      font-weight:600;
+      color:#173c66;
+      background:linear-gradient(180deg,#ffffff 0%,#f9fcff 100%);
+      outline:none;
+      transition:border-color .15s ease, box-shadow .15s ease, transform .12s ease;
+    }
+    input:not([type="checkbox"]):not([type="radio"]):hover,select:hover,button:hover { border-color:#aac8eb; }
+    select {
+      padding-right:12px;
+      appearance:auto;
+      -webkit-appearance:menulist;
+      background:#ffffff;
+      background-image:none;
+      transition:border-color .14s ease, box-shadow .14s ease, background-color .14s ease;
+    }
+    select option, select optgroup {
+      background:#ffffff;
+      color:#173c66;
+    }
+    input:not([type="checkbox"]):not([type="radio"]):focus,select:focus {
+      border-color:var(--acc2);
+      box-shadow:0 0 0 4px rgba(31,111,204,.12), 0 8px 16px rgba(27,98,175,.12);
+    }
+    input:not([type="checkbox"]):not([type="radio"]):focus {
+      transform:translateY(-1px);
+    }
+    select:focus {
+      transform:none;
+    }
+    select.native-select-hidden {
+      display:none !important;
+    }
+    .custom-select {
+      position:relative;
+      width:100%;
+      min-width:0;
+      max-width:100%;
+      display:block;
+    }
+    .custom-select-trigger {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      text-align:left;
+      background:linear-gradient(180deg,#ffffff 0%,#f9fcff 100%);
+      min-width:0;
+      max-width:100%;
+      overflow:hidden;
+      width:100%;
+    }
+    .custom-select-value {
+      flex:1 1 auto;
+      display:block;
+      min-width:0;
+      max-width:100%;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .custom-select-arrow {
+      flex:0 0 auto;
+      width:16px;
+      height:16px;
+      border-radius:999px;
+      display:grid;
+      place-items:center;
+      color:#2f5f95;
+      font-size:11px;
+      transition:transform .18s ease, color .18s ease, background-color .18s ease;
+    }
+    .custom-select.open .custom-select-arrow {
+      transform:rotate(180deg);
+      color:#0f4a84;
+      background-color:rgba(57,141,226,.14);
+    }
+    .custom-select-menu {
+      position:absolute;
+      left:0;
+      right:0;
+      top:calc(100% + 8px);
+      z-index:2200;
+      border:1px solid #c4d8f3;
+      border-radius:12px;
+      background:linear-gradient(180deg,#ffffff 0%,#f8fcff 100%);
+      box-shadow:0 16px 30px rgba(19,67,120,.2);
+      padding:6px;
+      max-height:280px;
+      overflow:auto;
+      opacity:0;
+      transform:translateY(-6px) scale(.985);
+      transform-origin:top center;
+      pointer-events:none;
+      transition:opacity .14s ease, transform .18s cubic-bezier(.2,.8,.2,1);
+    }
+    .custom-select.open .custom-select-menu {
+      opacity:1;
+      transform:translateY(0) scale(1);
+      pointer-events:auto;
+    }
+    .custom-select-actions {
+      display:flex;
+      gap:6px;
+      padding:2px 2px 6px;
+      margin-bottom:4px;
+      border-bottom:1px solid #e5effb;
+    }
+    .custom-select-action {
+      flex:1 1 0;
+      min-height:30px;
+      border:1px solid #d2e3f8;
+      border-radius:8px;
+      background:linear-gradient(180deg,#ffffff 0%,#f5faff 100%);
+      color:#2f5f92;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      padding:4px 6px;
+      box-shadow:none;
+    }
+    .custom-select-action:hover {
+      border-color:#bcd7f6;
+      background:linear-gradient(180deg,#f4f9ff 0%,#eaf4ff 100%);
+      color:#16508c;
+      transform:none;
+    }
+    .custom-select-option {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      width:100%;
+      min-height:36px;
+      border:1px solid transparent;
+      border-radius:9px;
+      background:transparent;
+      color:#143d69;
+      padding:7px 10px;
+      font-size:13px;
+      font-weight:700;
+      text-align:left;
+      box-shadow:none;
+      transition:background-color .12s ease, border-color .12s ease, color .12s ease;
+    }
+    .custom-select-option::before {
+      content:"";
+      width:14px;
+      height:14px;
+      border-radius:4px;
+      border:1px solid #adc8e8;
+      background:#ffffff;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+      flex:0 0 auto;
+    }
+    .custom-select-option:hover {
+      border-color:#d0e3f9;
+      background:linear-gradient(180deg,#f3f9ff 0%,#eaf4ff 100%);
+      color:#0e4b86;
+      transform:none;
+    }
+    .custom-select-option.selected {
+      border-color:#b8d8fb;
+      background:linear-gradient(180deg,#e9f4ff 0%,#dcedff 100%);
+      color:#0f4f8f;
+    }
+    .custom-select-option.selected::before {
+      border-color:#1f7fe0;
+      background:linear-gradient(180deg,#2f97ff 0%,#1d74cf 100%);
+      box-shadow:inset 0 0 0 2px rgba(255,255,255,.82);
+    }
+    .btn-primary {
+      position:relative;
+      overflow:hidden;
+      border-color:#1d79dc;
+      background:linear-gradient(130deg,#34a4ff 0%,#1f79dc 45%,#1966bf 100%);
+      background-size:160% 160%;
+      color:#fff;
+      font-family:"Sora","Manrope",sans-serif;
+      font-size:14px;
+      font-weight:700;
+      letter-spacing:.02em;
+      cursor:pointer;
+      box-shadow:0 11px 24px rgba(27,112,202,.28), inset 0 1px 0 rgba(255,255,255,.26);
+      animation:buttonGradient 8s ease-in-out infinite;
+    }
+    .btn-primary::after {
+      content:"";
+      position:absolute;
+      inset:-130% -40%;
+      background:linear-gradient(118deg, rgba(255,255,255,0) 40%, rgba(255,255,255,.36) 50%, rgba(255,255,255,0) 60%);
+      transform:translateX(-120%) rotate(10deg);
+      animation:btnSheen 3.8s ease-in-out infinite;
+      pointer-events:none;
+    }
+    .btn-primary:hover {
+      transform:translateY(-2px);
+      box-shadow:0 16px 28px rgba(23,106,192,.34), inset 0 1px 0 rgba(255,255,255,.3);
+    }
+    .btn-primary:active { transform:translateY(0); }
+    .btn-primary:disabled,
+    .history-btn:disabled {
+      cursor:default;
+      opacity:.62;
+      transform:none;
+      box-shadow:none;
+    }
+    .btn-primary.is-loading {
+      padding-left:42px;
+    }
+    .btn-primary.is-loading::before {
+      content:"";
+      position:absolute;
+      left:14px;
+      top:50%;
+      width:16px;
+      height:16px;
+      margin-top:-8px;
+      border-radius:50%;
+      border:2px solid rgba(255,255,255,.32);
+      border-top-color:#ffffff;
+      animation:buttonSpin .7s linear infinite;
+      z-index:1;
+    }
+    .run-actions {
+      display:flex;
+      align-items:stretch;
+      gap:8px;
+    }
+    .run-actions .btn-primary {
+      flex:1 1 auto;
+    }
+    .history-btn {
+      width:42px;
+      min-width:42px;
+      min-height:44px;
+      padding:0;
+      border:1px solid #bfd2eb;
+      border-radius:12px;
+      background:linear-gradient(180deg,#ffffff 0%,#f4f9ff 100%);
+      color:#204d7d;
+      font-family:"Sora","Manrope",sans-serif;
+      font-size:18px;
+      font-weight:700;
+      box-shadow:0 7px 16px rgba(18,63,114,.1);
+    }
+    .history-btn:hover {
+      transform:translateY(-1px);
+      border-color:#a8c9ec;
+      box-shadow:0 10px 18px rgba(18,63,114,.14);
+    }
+    .metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+    .baseline-block {
+      border:1px solid #c3d9f4;
+      border-radius:16px;
+      background:
+        linear-gradient(130deg, rgba(236,246,255,.96) 0%, rgba(228,241,255,.96) 50%, rgba(214,233,255,.9) 100%);
+      padding:12px;
+      box-shadow:0 12px 24px rgba(18,63,114,.12);
+      display:grid;
+      gap:10px;
+    }
+    .baseline-block.compact {
+      padding:6px 8px;
+      gap:6px;
+      border-radius:12px;
+      box-shadow:0 6px 12px rgba(18,63,114,.08);
+    }
+    .baseline-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .baseline-block.compact .baseline-title {
+      font-size:10px;
+      letter-spacing:.08em;
+    }
+    .baseline-block.compact .baseline-note {
+      font-size:10px;
+    }
+    .baseline-block.compact .baseline-grid {
+      gap:6px;
+      grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
+    }
+    .baseline-block.compact .baseline-cell {
+      padding:6px 7px;
+      border-radius:9px;
+    }
+    .baseline-block.compact .baseline-k {
+      font-size:8px;
+      margin-bottom:3px;
+    }
+    .baseline-block.compact .baseline-v {
+      font-size:14px;
+    }
+    .baseline-title {
+      margin:0;
+      font-family:"Sora","Manrope",sans-serif;
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      color:#1f4f83;
+      font-weight:800;
+    }
+    .baseline-note {
+      margin:0;
+      color:#335e8f;
+      font-size:12px;
+      font-weight:700;
+    }
+    .baseline-grid {
+      display:grid;
+      gap:10px;
+      grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    }
+    .baseline-cell {
+      border:1px solid #cfe2f9;
+      border-radius:12px;
+      padding:10px 11px;
+      background:linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(247,252,255,.92) 100%);
+    }
+    .baseline-k {
+      margin:0 0 5px;
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      color:#5c7698;
+      font-weight:800;
+    }
+    .baseline-v {
+      margin:0;
+      font-family:"Sora","Manrope",sans-serif;
+      font-size:20px;
+      line-height:1.2;
+      color:#0f345f;
+      font-weight:800;
+      word-break:break-word;
+    }
+    .metric {
+      border:1px solid #d4e3f7;
+      border-radius:14px;
+      background:
+        linear-gradient(165deg,#ffffff 0%,#f8fcff 62%,#f1f8ff 100%);
+      padding:12px 13px;
+      box-shadow:0 9px 22px rgba(16,62,108,.08);
+      transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    }
+    .metric:hover {
+      transform:translateY(-1px);
+      border-color:#c1d9f6;
+      box-shadow:0 14px 24px rgba(16,62,108,.12);
+    }
+    .metric .k {
+      margin:0 0 5px;
+      color:#627d9f;
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      font-weight:800;
+    }
+    .metric .v {
+      margin:0;
+      font-family:"Sora","Manrope",sans-serif;
+      font-size:33px;
+      font-weight:700;
+      letter-spacing:-.02em;
+      line-height:1.05;
+      color:#0f2f56;
+      font-variant-numeric:tabular-nums;
+    }
+    .status {
+      border:1px solid #c9dcf7;
+      border-radius:14px;
+      background:linear-gradient(180deg, #f4faff 0%, #eaf4ff 100%);
+      color:#1f4f87;
+      padding:12px 14px;
+      font-size:13px;
+      font-weight:700;
+      line-height:1.5;
+      box-shadow:0 8px 17px rgba(20,76,133,.1);
+      position:relative;
+      overflow:hidden;
+    }
+    .status::after {
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(110deg, rgba(255,255,255,0) 35%, rgba(255,255,255,.45) 50%, rgba(255,255,255,0) 65%);
+      transform:translateX(-120%);
+      animation:statusShine 6.5s linear infinite;
+      pointer-events:none;
+    }
+    .status.status-warn {
+      border-color:#efb2b2;
+      background:linear-gradient(180deg,#fff1f1 0%,#ffe7e7 100%);
+      color:#a52727;
+      box-shadow:0 8px 16px rgba(182,52,52,.14);
+    }
+    .status.status-warn::after { display:none; }
+    .check-pill {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-height:44px;
+      border:1px solid #bfd2eb;
+      border-radius:12px;
+      padding:8px 12px;
+      background:linear-gradient(180deg,#ffffff 0%,#f9fcff 100%);
+      color:#16385f;
+      font-size:13px;
+      font-weight:700;
+      text-transform:none;
+      letter-spacing:0;
+      cursor:pointer;
+    }
+    .check-pill input[type="checkbox"] {
+      width:18px;
+      height:18px;
+      margin:0;
+      accent-color:#1f77da;
+      cursor:pointer;
+      min-height:0;
+      padding:0;
+      border:none;
+      border-radius:4px;
+      background:transparent;
+      box-shadow:none;
+      transform:none;
+      transition:none;
+    }
+    .table-wrap {
+      border:1px solid #d3e2f7;
+      border-radius:16px;
+      overflow:auto;
+      background:#fff;
+      max-height:58vh;
+      box-shadow:0 12px 24px rgba(18,63,114,.09);
+      transition:box-shadow .25s ease, border-color .25s ease;
+    }
+    .table-wrap:hover {
+      border-color:#b7d3f4;
+      box-shadow:0 14px 28px rgba(18,63,114,.12);
+    }
+    table { width:100%; border-collapse:collapse; min-width:1180px; font-size:12px; }
+    th,td { border-bottom:1px solid #e5eefb; padding:8px 8px; text-align:left; vertical-align:top; }
+    th {
+      position:sticky;
+      top:0;
+      z-index:1;
+      background:linear-gradient(180deg,#f5f9ff 0%,#eaf2ff 100%);
+      color:#55739a;
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      font-weight:800;
+      line-height:1.3;
+      white-space:normal;
+      overflow-wrap:anywhere;
+    }
+    thead tr:first-child th { top:0; z-index:3; }
+    th.sortable-th { cursor:pointer; user-select:none; transition:background .15s ease, color .15s ease; }
+    th.sortable-th:hover { background:linear-gradient(180deg,#eef5ff 0%,#ddeafd 100%); color:#2a5a8e; }
+    th.sortable-th.active-sort { color:#0d63bd; }
+    tbody tr:nth-child(2n) { background:rgba(248,252,255,.7); }
+    tbody tr {
+      transition:background-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+    tbody tr:hover {
+      background:linear-gradient(180deg, #edf6ff 0%, #e8f3ff 100%);
+      box-shadow:inset 0 0 0 1px rgba(127,185,243,.28);
+    }
+    .num { white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .delta-pos { color:var(--bad); font-weight:800; }
+    .delta-neg { color:var(--ok); font-weight:800; }
+    .delta-zero { color:#2e5f96; font-weight:800; }
+    .muted { color:#6c86a6; }
+    .empty { padding:20px; color:#6e86a5; text-align:center; display:none; }
+    .insight {
+      border:1px solid #d4e3f8;
+      border-radius:14px;
+      background:linear-gradient(168deg,#ffffff 0%,#f6fbff 100%);
+      padding:10px;
+      display:grid;
+      gap:8px;
+      box-shadow:0 8px 20px rgba(20,75,128,.08);
+      transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+      position:relative;
+      overflow:hidden;
+    }
+    .insight::before {
+      content:"";
+      position:absolute;
+      top:0;
+      left:0;
+      right:0;
+      height:3px;
+      background:linear-gradient(90deg,#1e6fc8 0%, #49b2ff 45%, #8ed8ff 100%);
+      opacity:.92;
+    }
+    .insight:hover {
+      transform:translateY(-2px);
+      border-color:#bed8f8;
+      box-shadow:0 14px 24px rgba(20,75,128,.12);
+    }
+    .insight h3 {
+      margin:0;
+      font-family:"Sora","Manrope",sans-serif;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      color:#214f82;
+    }
+    .mini-wrap {
+      border:1px solid #dbe8fa;
+      border-radius:12px;
+      overflow:auto;
+      background:
+        linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      max-height:220px;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.8), 0 10px 16px rgba(22,77,131,.07);
+    }
+    .mini-table {
+      min-width:820px;
+      font-size:11px;
+      width:100%;
+      border-collapse:collapse;
+    }
+    .mini-table th,.mini-table td { border-bottom:1px solid #e7effb; padding:7px 7px; }
+    .mini-table th {
+      position:static;
+      background:linear-gradient(180deg,#eef6ff 0%,#deebff 100%);
+      color:#355b86;
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.07em;
+      font-weight:800;
+    }
+    .mini-table tbody tr:nth-child(2n) {
+      background:linear-gradient(180deg, rgba(247,251,255,.95) 0%, rgba(242,248,255,.92) 100%);
+    }
+    .mini-table tbody tr:first-child {
+      background:
+        linear-gradient(180deg, rgba(236,247,255,.95) 0%, rgba(228,242,255,.95) 100%);
+    }
+    .mini-table tbody tr:first-child td {
+      box-shadow:inset 0 -1px 0 rgba(170,202,236,.7);
+    }
+    .mini-table tbody td:last-child,
+    .mini-table tbody td:nth-last-child(2) {
+      font-weight:800;
+      color:#153e69;
+    }
+    .mini-table tbody td:first-child {
+      font-weight:700;
+      color:#244f7f;
+    }
+    .mini-table tbody tr {
+      transition:background-color .15s ease;
+    }
+    .mini-table tbody tr:hover {
+      background:
+        linear-gradient(180deg, #eaf4ff 0%, #e1efff 100%);
+    }
+    .mini-table tbody tr.apply-row {
+      cursor:pointer;
+    }
+    .mini-table tbody tr.apply-row.active {
+      outline:2px solid #5aa6ff;
+      outline-offset:-2px;
+      background:linear-gradient(180deg,#e1f0ff 0%,#d6ebff 100%);
+    }
+    @keyframes bgFlow {
+      0%,100% { background-position:0% 0%, 100% 0%, 50% 50%; }
+      50% { background-position:8% 3%, 92% 4%, 46% 58%; }
+    }
+    @keyframes blobFloatA {
+      0%,100% { transform:translate(0,0) scale(1); opacity:.95; }
+      50% { transform:translate(24px,20px) scale(1.06); opacity:.75; }
+    }
+    @keyframes blobFloatB {
+      0%,100% { transform:translate(0,0) scale(1); opacity:.9; }
+      50% { transform:translate(-20px,-24px) scale(1.07); opacity:.7; }
+    }
+    @keyframes sheenSlide {
+      0% { transform:translateX(-26%); opacity:.35; }
+      55% { transform:translateX(14%); opacity:.55; }
+      100% { transform:translateX(34%); opacity:.2; }
+    }
+    @keyframes panelIn {
+      from { opacity:0; transform:translateY(12px) scale(.996); }
+      to { opacity:1; transform:translateY(0) scale(1); }
+    }
+    @keyframes panelFade {
+      from { opacity:0; }
+      to { opacity:1; }
+    }
+    @keyframes contentRise {
+      from { opacity:0; transform:translateY(6px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+    @keyframes buttonGradient {
+      0%,100% { background-position:0% 52%; }
+      50% { background-position:100% 52%; }
+    }
+    @keyframes btnSheen {
+      0% { transform:translateX(-120%) rotate(10deg); }
+      45% { transform:translateX(85%) rotate(10deg); }
+      100% { transform:translateX(170%) rotate(10deg); }
+    }
+    @keyframes buttonSpin {
+      from { transform:rotate(0deg); }
+      to { transform:rotate(360deg); }
+    }
+    @keyframes activePulse {
+      0%,100% { box-shadow:0 10px 22px rgba(19,94,177,.2); }
+      50% { box-shadow:0 12px 28px rgba(19,94,177,.3); }
+    }
+    @keyframes statusShine {
+      0% { transform:translateX(-120%); opacity:0; }
+      15% { opacity:.55; }
+      40% { transform:translateX(120%); opacity:0; }
+      100% { transform:translateX(120%); opacity:0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *,*::before,*::after { animation:none !important; transition:none !important; }
+      .card.active > * { opacity:1; transform:none; }
+    }
+    @media (max-width: 900px) {
+      .hero { padding:28px 22px; }
+      .hero h1 { font-size:30px; }
+      .metric .v { font-size:28px; }
+      .tab-btn { min-width:220px; }
+      input,select,button { font-size:13px; }
+      .table-wrap { max-height:52vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <h1>Калькулятор Формула кц</h1>
+    </section>
+
+    <section class="tabs">
+      <button class="tab-btn active" data-tab="kc" type="button">1. Для КЦ</button>
+      <button class="tab-btn" data-tab="reverse" type="button">2. Обратный</button>
+      <button class="tab-btn" data-tab="standard" type="button">3. Стандартный</button>
+    </section>
+
+    <section id="panel-kc" class="card active">
+      <div class="prices fixed-prices">
+        <div class="prices-head">
+          <h3>Вмененная стоимость по типам планировки, ₽</h3>
+          <label class="check-pill" for="kcWithRepair"><input id="kcWithRepair" type="checkbox" /><span>С ремонтом</span></label>
+        </div>
+        <div class="row"><label for="priceStudio">Студия</label><input id="priceStudio" class="fixed-price" type="text" value="3800000" readonly /></div>
+        <div class="row"><label for="price1K">1К</label><input id="price1K" class="fixed-price" type="text" value="4300000" readonly /></div>
+        <div class="row"><label for="price2E">2Е</label><input id="price2E" class="fixed-price" type="text" value="4900000" readonly /></div>
+        <div class="row"><label for="price2K">2К</label><input id="price2K" class="fixed-price" type="text" value="6300000" readonly /></div>
+        <div class="row"><label for="price3E">3Е</label><input id="price3E" class="fixed-price" type="text" value="6900000" readonly /></div>
+        <div class="row"><label for="price3K">3К</label><input id="price3K" class="fixed-price" type="text" value="8300000" readonly /></div>
+        <div class="row"><label for="price4E">4Е</label><input id="price4E" class="fixed-price" type="text" value="9000000" readonly /></div>
+      </div>
+
+      <div class="grid">
+        <div class="row"><label for="kcLayout">Тип планировки</label><select id="kcLayout"></select></div>
+        <div class="row"><label for="kcProgram">Тип ипотеки</label><select id="kcProgram"></select></div>
+        <div class="row"><label for="kcPayment">Желаемый ЕП, ₽/мес</label><input id="kcPayment" type="text" value="50000" /></div>
+        <div class="row"><label for="kcPv">Доступный ПВ клиента, ₽</label><input id="kcPv" type="text" value="1500000" /></div>
+        <div class="row">
+          <label>&nbsp;</label>
+          <div class="run-actions">
+            <button id="kcUndo" class="history-btn" type="button" title="Предыдущий расчет" aria-label="Предыдущий расчет">←</button>
+            <button id="kcRedo" class="history-btn" type="button" title="Следующий расчет" aria-label="Следующий расчет">→</button>
+            <button id="kcRun" class="btn-primary" type="button">Рассчитать</button>
+          </div>
+        </div>
+      </div>
+      <section class="baseline-block compact">
+        <div class="baseline-head">
+          <h3 class="baseline-title">Стандартные условия</h3>
+          <p id="kcBaseNote" class="baseline-note">ПВ 20%, базовая ставка из таблицы ставок.</p>
+        </div>
+        <div class="baseline-grid">
+          <article class="baseline-cell"><p class="baseline-k">Банк / программа</p><p id="kcBaseBank" class="baseline-v">-</p></article>
+          <article class="baseline-cell"><p class="baseline-k">Базовая ставка</p><p id="kcBaseRate" class="baseline-v">-</p></article>
+          <article class="baseline-cell"><p class="baseline-k">ПВ (20%)</p><p id="kcBasePv20" class="baseline-v">-</p></article>
+          <article class="baseline-cell"><p class="baseline-k">ЕП (база)</p><p id="kcBaseEp" class="baseline-v">-</p></article>
+          <article class="baseline-cell"><p class="baseline-k">Итоговая стоимость (база)</p><p id="kcBaseTotal" class="baseline-v">-</p></article>
+        </div>
+      </section>
+
+      <div class="metrics">
+        <article class="metric"><p class="k">Подходящих сценариев</p><p id="kcCount" class="v">0</p></article>
+        <article class="metric"><p class="k">Мин. итоговый ПВ</p><p id="kcMinPv" class="v">-</p></article>
+        <article class="metric"><p class="k">Лучший банк / программа</p><p id="kcBest" class="v" style="font-size:15px;line-height:1.3">-</p></article>
+        <article class="metric"><p class="k">Мин. цена сделки</p><p id="kcMinDeal" class="v">-</p></article>
+      </div>
+
+      <section class="insight">
+        <h3>Лучшие предложения по срокам</h3>
+        <div class="mini-wrap">
+          <table class="mini-table">
+            <thead><tr>
+              <th>Срок</th><th>Банк</th><th>Программа</th><th>Ставка</th><th>КВ</th><th>ПВ в сделке</th><th>Итоговый ПВ</th><th>Цена сделки</th><th>Итог. стоимость</th>
+            </tr></thead>
+            <tbody id="kcBestTermsBody"></tbody>
+          </table>
+          <div id="kcBestTermsEmpty" class="empty">Нет лучших предложений по срокам под текущие фильтры.</div>
+        </div>
+      </section>
+      <section class="insight">
+        <h3>Рекомендации на уменьшение</h3>
+        <div class="mini-wrap">
+          <table class="mini-table">
+            <thead><tr>
+              <th>Рекомендация</th><th>Значение ЕП</th><th>Значение ПВ</th><th>Банк</th><th>Программа</th><th>Срок</th><th>Итоговый ПВ</th><th>Цена сделки</th><th>Итог. стоимость</th>
+            </tr></thead>
+            <tbody id="kcRecoDownBody"></tbody>
+          </table>
+          <div id="kcRecoDownEmpty" class="empty">Рекомендаций на уменьшение нет.</div>
+        </div>
+      </section>
+      <section class="insight">
+        <h3>Рекомендации на увеличение срока</h3>
+        <div class="mini-wrap">
+          <table class="mini-table">
+            <thead><tr>
+              <th>Рекомендация</th><th>Значение ЕП</th><th>Значение ПВ</th><th>Банк</th><th>Программа</th><th>Срок</th><th>Итоговый ПВ</th><th>Цена сделки</th><th>Итог. стоимость</th>
+            </tr></thead>
+            <tbody id="kcRecoBody"></tbody>
+          </table>
+          <div id="kcRecoEmpty" class="empty">Рекомендаций нет: текущие параметры уже в рабочем диапазоне.</div>
+        </div>
+      </section>
+
+      <div id="kcStatus" class="status">Заполните цену для выбранной планировки и нажмите «Рассчитать».</div>
+      <div class="table-wrap">
+        <table id="kcTable">
+          <thead><tr>
+            <th>Банк</th><th>Программа</th><th>Срок</th><th>Ставка</th><th>КВ</th><th>МФЦ</th><th>Цена сделки</th><th>ПВ в сделке</th><th>Итоговый ПВ</th><th>ПВ, %</th><th>ЕП в сроке</th><th>ЕП после срока</th><th>Итог. субсидия</th><th>Итог. стоимость</th><th>Δ к базе</th>
+          </tr></thead>
+          <tbody id="kcBody"></tbody>
+        </table>
+        <div id="kcEmpty" class="empty">Нет сценариев под заданные условия.</div>
+      </div>
+    </section>
+    <section id="panel-reverse" class="card">
+      <div class="grid">
+        <div class="row"><label for="rvLayout">Тип планировки</label><select id="rvLayout"></select></div>
+        <div class="row"><label for="rvProgram">Тип ипотеки</label><select id="rvProgram"></select></div>
+        <div class="row"><label for="rvBank">Банк</label><select id="rvBank"></select></div>
+        <div class="row"><label for="rvTerm">Срок субсидии</label><select id="rvTerm"></select></div>
+        <div class="row"><label for="rvDeal">Цена сделки, ₽</label><input id="rvDeal" type="text" value="9000000" /></div>
+        <div class="row"><label for="rvPayment">ЕП в сроке, ₽/мес</label><input id="rvPayment" type="text" value="50000" /></div>
+        <div class="row"><label for="rvBonus">Бонус, ₽</label><input id="rvBonus" type="text" value="0" /></div>
+        <div class="row"><label for="rvFinalPv">Итоговый ПВ (целевой), ₽</label><input id="rvFinalPv" type="text" value="" placeholder="не задан" /></div>
+        <div class="row"><label>&nbsp;</label><button id="rvRun" class="btn-primary" type="button">Рассчитать</button></div>
+      </div>
+
+      <div class="metrics">
+        <article class="metric"><p class="k">Сценариев</p><p id="rvCount" class="v">0</p></article>
+        <article class="metric"><p class="k">Мин. МФЦ</p><p id="rvMinMfc" class="v">-</p></article>
+        <article class="metric"><p class="k">Макс. МФЦ</p><p id="rvMaxMfc" class="v">-</p></article>
+        <article class="metric"><p class="k">Медианный МФЦ</p><p id="rvMedMfc" class="v">-</p></article>
+      </div>
+
+      <section class="insight">
+        <h3>Рекомендации (когда нет сценариев)</h3>
+        <div class="mini-wrap">
+          <table class="mini-table">
+            <thead><tr>
+              <th>Рекомендация</th><th>Значение ЕП</th><th>Значение ПВ</th><th>Банк</th><th>Программа</th><th>Срок</th><th>Итоговый ПВ</th><th>Цена сделки</th><th>Итог. стоимость</th>
+            </tr></thead>
+            <tbody id="rvRecoBody"></tbody>
+          </table>
+          <div id="rvRecoEmpty" class="empty">Рекомендаций нет.</div>
+        </div>
+      </section>
+
+      <div id="rvStatus" class="status">Обратный расчет: из цены сделки, ЕП, срока и бонуса вычисляется МФЦ.</div>
+      <div class="table-wrap">
+        <table id="rvTable">
+          <thead><tr>
+            <th>Банк</th><th>Программа</th><th>Срок</th><th>Ставка</th><th>КВ</th><th>Цена сделки</th><th>Рассчитанный МФЦ</th><th>Бонус, ₽</th><th>Бонус, %</th><th>ПВ в сделке</th><th>Итоговый ПВ</th><th>ПВ, %</th><th>ЕП после срока</th><th>Итог. стоимость</th><th>Δ к базе</th>
+          </tr></thead>
+          <tbody id="rvBody"></tbody>
+        </table>
+        <div id="rvEmpty" class="empty">Нет валидных сценариев для обратного расчета.</div>
+      </div>
+    </section>
+
+    <section id="panel-standard" class="card">
+      <div class="grid">
+        <div class="row"><label for="stProgram">Тип ипотеки</label><select id="stProgram"></select></div>
+        <div class="row"><label for="stBank">Банк</label><select id="stBank"></select></div>
+        <div class="row"><label for="stTerm">Срок субсидии</label><select id="stTerm"></select></div>
+        <div class="row"><label for="stMfc">МФЦ, ₽</label><input id="stMfc" type="text" value="7000000" /></div>
+        <div class="row"><label for="stPayment">ЕП в сроке, ₽/мес</label><input id="stPayment" type="text" value="50000" /></div>
+        <div class="row"><label for="stBonus">Бонус, ₽</label><input id="stBonus" type="text" value="0" /></div>
+        <div class="row"><label for="stMatCap">Маткапитал, ₽</label><input id="stMatCap" type="text" value="737000" /></div>
+        <div class="row"><label>&nbsp;</label><label class="check-pill" for="stUseMatCap"><input id="stUseMatCap" type="checkbox" /><span>Применять маткапитал</span></label></div>
+        <div class="row"><label for="stPvMax">Макс. итоговый ПВ, ₽</label><input id="stPvMax" type="text" value="9000000" /></div>
+        <div class="row"><label>&nbsp;</label><button id="stRun" class="btn-primary" type="button">Рассчитать</button></div>
+      </div>
+      <section class="baseline-block">
+        <div class="baseline-head">
+          <h3 class="baseline-title">Стандартные условия</h3>
+          <p id="stBaseNote" class="baseline-note">ПВ 20%, базовая ставка из таблицы ставок.</p>
+        </div>
+        <div class="baseline-grid">
+          <article class="baseline-cell"><p class="baseline-k">Банк / программа</p><p id="stBaseBank" class="baseline-v">-</p></article>
+          <article class="baseline-cell"><p class="baseline-k">Базовая ставка</p><p id="stBaseRate" class="baseline-v">-</p></article>
+          <article class="baseline-cell"><p class="baseline-k">ПВ (20%)</p><p id="stBasePv20" class="baseline-v">-</p></article>
+          <article class="baseline-cell"><p class="baseline-k">ЕП (база)</p><p id="stBaseEp" class="baseline-v">-</p></article>
+          <article class="baseline-cell"><p class="baseline-k">Итоговая стоимость (база)</p><p id="stBaseTotal" class="baseline-v">-</p></article>
+        </div>
+      </section>
+
+      <div class="metrics">
+        <article class="metric"><p class="k">Сценариев</p><p id="stCount" class="v">0</p></article>
+        <article class="metric"><p class="k">Мин. итоговый ПВ</p><p id="stMinPv" class="v">-</p></article>
+        <article class="metric"><p class="k">Мин. цена сделки</p><p id="stMinDeal" class="v">-</p></article>
+        <article class="metric"><p class="k">Мин. итоговая стоимость</p><p id="stMinCost" class="v">-</p></article>
+      </div>
+
+      <section class="insight">
+        <h3>Лучшие предложения по срокам</h3>
+        <div class="mini-wrap">
+          <table class="mini-table">
+            <thead><tr>
+              <th>Срок</th><th>Банк</th><th>Программа</th><th>Ставка</th><th>КВ</th><th>ПВ в сделке</th><th>Итоговый ПВ</th><th>Цена сделки</th><th>Итог. стоимость</th>
+            </tr></thead>
+            <tbody id="stBestTermsBody"></tbody>
+          </table>
+          <div id="stBestTermsEmpty" class="empty">Нет лучших предложений по срокам под текущие фильтры.</div>
+        </div>
+      </section>
+      <section class="insight">
+        <h3>Рекомендации на уменьшение</h3>
+        <div class="mini-wrap">
+          <table class="mini-table">
+            <thead><tr>
+              <th>Рекомендация</th><th>Значение ЕП</th><th>Значение ПВ</th><th>Банк</th><th>Программа</th><th>Срок</th><th>Итоговый ПВ</th><th>Цена сделки</th><th>Итог. стоимость</th>
+            </tr></thead>
+            <tbody id="stRecoDownBody"></tbody>
+          </table>
+          <div id="stRecoDownEmpty" class="empty">Рекомендаций на уменьшение нет.</div>
+        </div>
+      </section>
+      <section class="insight">
+        <h3>Рекомендации на увеличение срока</h3>
+        <div class="mini-wrap">
+          <table class="mini-table">
+            <thead><tr>
+              <th>Рекомендация</th><th>Значение ЕП</th><th>Значение ПВ</th><th>Банк</th><th>Программа</th><th>Срок</th><th>Итоговый ПВ</th><th>Цена сделки</th><th>Итог. стоимость</th>
+            </tr></thead>
+            <tbody id="stRecoBody"></tbody>
+          </table>
+          <div id="stRecoEmpty" class="empty">Рекомендаций нет: текущие параметры уже в рабочем диапазоне.</div>
+        </div>
+      </section>
+
+      <div id="stStatus" class="status">Стандартный режим: вводите МФЦ, система считает разные варианты ставок.</div>
+      <div class="table-wrap">
+        <table id="stTable">
+          <thead><tr>
+            <th>Банк</th><th>Программа</th><th>Срок</th><th>Ставка</th><th>КВ</th><th>МФЦ</th><th>Цена сделки</th><th>ПВ в сделке</th><th>Итоговый ПВ</th><th>ПВ, %</th><th>ЕП в сроке</th><th>ЕП после срока</th><th>Итог. субсидия</th><th>Бонус, %</th><th>Итог. стоимость</th><th>Δ к базе</th>
+          </tr></thead>
+          <tbody id="stBody"></tbody>
+        </table>
+        <div id="stEmpty" class="empty">Нет сценариев под заданные условия.</div>
+      </div>
+    </section>
+  </div>
+
+  <script src="./mortgage_calculator_data.js?v=20260401_1"></script>
+  <script>
+    (function () {
+      var data = window.MORTGAGE_CALC_DATA;
+      if (!data || !Array.isArray(data.rates)) {
+        document.body.innerHTML = "<div style='padding:20px;font-family:Manrope,sans-serif'>Не найден блок rates в mortgage_calculator_data.js</div>";
+        return;
+      }
+
+      var YEARS = 30;
+      var TOTAL_MONTHS = YEARS * 12;
+      var FAMILY_IT_CAP = 6000000;
+      var FIXED_LAYOUT_PRICES = {
+        "Студия": 3800000,
+        "1К": 4300000,
+        "2Е": 4900000,
+        "2К": 6300000,
+        "3Е": 6900000,
+        "3К": 8300000,
+        "4Е": 9000000
+      };
+      var REPAIR_LAYOUT_ADDITIONS = {
+        "Студия": 625000,
+        "1К": 875000,
+        "2Е": 1000000,
+        "2К": 1300000,
+        "3Е": 1450000,
+        "3К": 1875000
+      };
+      var LAYOUTS = Object.keys(FIXED_LAYOUT_PRICES);
+
+      var priceInputs = {
+        "Студия": document.getElementById("priceStudio"),
+        "1К": document.getElementById("price1K"),
+        "2Е": document.getElementById("price2E"),
+        "2К": document.getElementById("price2K"),
+        "3Е": document.getElementById("price3E"),
+        "3К": document.getElementById("price3K"),
+        "4Е": document.getElementById("price4E")
+      };
+      var kcWithRepair = document.getElementById("kcWithRepair");
+
+      function num(v) {
+        if (v === null || v === undefined || v === "") return NaN;
+        if (typeof v === "number") return v;
+        var n = Number(String(v).replace(/\s+/g, "").replace(",", "."));
+        return Number.isFinite(n) ? n : NaN;
+      }
+      function intFmt(v) {
+        return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
+          .format(Math.round(Number(v) || 0))
+          .replace(/\u00A0/g, " ");
+      }
+      function money(v) { return intFmt(v) + " ₽"; }
+      function pct(v, d) { return (Number(v || 0) * 100).toFixed(d || 2).replace(".", ",") + "%"; }
+      function pctPlain(v, d) { return Number(v || 0).toFixed(d || 2).replace(".", ",") + "%"; }
+      function moneyDelta(v) { return (v > 0 ? "+" : "") + money(v); }
+      function deltaClass(v) { if (v > 1e-9) return "delta-pos"; if (v < -1e-9) return "delta-neg"; return "delta-zero"; }
+      function median(values) { if (!values.length) return NaN; var s = values.slice().sort(function (a, b) { return a - b; }); var m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+      function asIntText(input) { var n = num(input.value); if (!Number.isFinite(n) || n < 0) n = 0; n = Math.round(n); input.value = intFmt(n); return n; }
+      function bindMoneyInput(input) { input.addEventListener("blur", function () { asIntText(input); }); }
+      function isRepairEnabled() {
+        return !!(kcWithRepair && kcWithRepair.checked);
+      }
+      function getLayoutPrice(layoutName) {
+        var base = FIXED_LAYOUT_PRICES[layoutName] || 0;
+        if (!isRepairEnabled()) return base;
+        return base + (REPAIR_LAYOUT_ADDITIONS[layoutName] || 0);
+      }
+      function refreshPriceInputs() {
+        Object.keys(priceInputs).forEach(function (layoutName) {
+          var input = priceInputs[layoutName];
+          if (!input) return;
+          input.value = intFmt(getLayoutPrice(layoutName));
+        });
+      }
+      function setStatus(node, text, isWarn) {
+        node.textContent = text;
+        node.classList.toggle("status-warn", !!isWarn);
+      }
+      function annuityLoanFromPayment(payment, annualRate, years) {
+        var n = Math.max(1, Math.round(years * 12));
+        var r = annualRate / 12;
+        if (!Number.isFinite(payment) || payment <= 0) return NaN;
+        if (!Number.isFinite(r) || r <= 0) return payment * n;
+        var p = Math.pow(1 + r, n);
+        return payment * ((p - 1) / (r * p));
+      }
+      function annuityPaymentFromLoan(loanBody, annualRate, months) {
+        var n = Math.max(1, Math.round(months));
+        var r = Number(annualRate) / 12;
+        if (!Number.isFinite(loanBody) || loanBody <= 0) return 0;
+        if (!Number.isFinite(r) || r <= 0) return loanBody / n;
+        var p = Math.pow(1 + r, n);
+        return loanBody * (r * p) / (p - 1);
+      }
+      function remainingBalanceAfterMonths(loanBody, annualRate, payment, monthsPaid) {
+        var k = Math.max(0, Math.round(monthsPaid));
+        if (k <= 0) return Math.max(0, loanBody);
+        var r = Number(annualRate) / 12;
+        if (!Number.isFinite(r) || r <= 0) return Math.max(0, loanBody - payment * k);
+        var p = Math.pow(1 + r, k);
+        return Math.max(0, loanBody * p - payment * ((p - 1) / r));
+      }
+      function parseDiscountTermMonths(termText, totalMonths) {
+        var text = String(termText || "").toLowerCase();
+        if (text.indexOf("весь срок") !== -1 || text.indexOf("на весь") !== -1) return totalMonths;
+        var m = text.match(/(\d+)/);
+        if (!m) return totalMonths;
+        var n = Number(m[1]);
+        if (!Number.isFinite(n) || n <= 0) return totalMonths;
+        return Math.min(totalMonths, Math.round(n));
+      }
+      var filteredRatesCache = new Map();
+      var termPoolCache = new WeakMap();
+      var poolIds = new WeakMap();
+      var nextPoolId = 1;
+      var runScenarioListCache = null;
+      var paymentScenarioCache = null;
+      var reverseScenarioCache = null;
+
+      function resetRunCaches() {
+        runScenarioListCache = new Map();
+        paymentScenarioCache = new Map();
+        reverseScenarioCache = new Map();
+      }
+      function getPoolId(pool) {
+        if (!pool || typeof pool !== "object") return 0;
+        var existing = poolIds.get(pool);
+        if (existing) return existing;
+        var next = nextPoolId++;
+        poolIds.set(pool, next);
+        return next;
+      }
+      function normalizeFilterList(v) {
+        if (Array.isArray(v)) {
+          return v.filter(Boolean).slice().sort(function (a, b) {
+            return String(a).localeCompare(String(b), "ru");
+          });
+        }
+        if (v === null || v === undefined || v === "") return [];
+        return [v];
+      }
+      function filterCacheKey(programVal, bankVal, termVal) {
+        return normalizeFilterList(programVal).join("\u0001") + "\u0002" +
+          normalizeFilterList(bankVal).join("\u0001") + "\u0002" +
+          normalizeFilterList(termVal).join("\u0001");
+      }
+      function groupPoolByTermMonths(pool) {
+        if (!pool || !pool.length) return Object.create(null);
+        var cached = termPoolCache.get(pool);
+        if (cached) return cached;
+        var grouped = Object.create(null);
+        for (var i = 0; i < pool.length; i++) {
+          var row = pool[i];
+          var key = String(row._termMonths);
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(row);
+        }
+        termPoolCache.set(pool, grouped);
+        return grouped;
+      }
+      function getPaymentScenarioState(rateRow, targetPayment) {
+        var payment = Math.max(0, Math.round(Number(targetPayment) || 0));
+        if (!(payment > 0)) return null;
+        if (!paymentScenarioCache) paymentScenarioCache = new Map();
+        var key = rateRow._id + "|" + payment;
+        if (paymentScenarioCache.has(key)) return paymentScenarioCache.get(key);
+
+        var loanBody = annuityLoanFromPayment(payment, rateRow._annualRate, YEARS);
+        var cached = null;
+        if (Number.isFinite(loanBody) && loanBody > 0) {
+          var subsidyMonths = rateRow._termMonths;
+          var remainingMonths = Math.max(0, TOTAL_MONTHS - subsidyMonths);
+          var remainingBody = remainingBalanceAfterMonths(loanBody, rateRow._annualRate, payment, subsidyMonths);
+          cached = {
+            loanBody: loanBody,
+            paymentDuring: payment,
+            subsidyMonths: subsidyMonths,
+            remainingMonths: remainingMonths,
+            postPayment: remainingMonths > 0 ? annuityPaymentFromLoan(remainingBody, rateRow._baseRate, remainingMonths) : 0
+          };
+        }
+        paymentScenarioCache.set(key, cached);
+        return cached;
+      }
+      function hasFamilyOrIt(program) {
+        var txt = String(program || "").toLowerCase();
+        return txt.indexOf("сем") !== -1 || txt.indexOf("family") !== -1 || txt.indexOf("it") !== -1 || txt.indexOf("ит") !== -1;
+      }
+      function rowLoanLimitsOk(rateRow, loanBody) {
+        var min = rateRow._loanMin;
+        var max = rateRow._loanMax;
+        if (Number.isFinite(min) && loanBody + 1e-9 < min) return false;
+        if (Number.isFinite(max) && loanBody - 1e-9 > max) return false;
+        if (rateRow._familyOrIt && loanBody - 1e-9 > FAMILY_IT_CAP) return false;
+        return true;
+      }
+      function termSort(term) {
+        var text = String(term || "").toLowerCase();
+        if (text.indexOf("весь срок") !== -1 || text.indexOf("на весь") !== -1) return 9999;
+        var m = text.match(/(\d+)/);
+        return m ? Number(m[1]) : 9998;
+      }
+      function uniq(list) {
+        return Array.from(new Set(list.filter(Boolean))).sort(function (a, b) {
+          return String(a).localeCompare(String(b), "ru");
+        });
+      }
+      function toValueSet(v) {
+        if (Array.isArray(v)) {
+          var list = v.filter(Boolean);
+          return list.length ? new Set(list) : null;
+        }
+        if (v === null || v === undefined || v === "") return null;
+        return new Set([v]);
+      }
+      function selectedValues(selectEl) {
+        if (!selectEl) return [];
+        var out = [];
+        for (var i = 0; i < selectEl.options.length; i++) {
+          if (selectEl.options[i].selected) out.push(selectEl.options[i].value);
+        }
+        return out.filter(Boolean);
+      }
+      function selectedSummary(selectEl, allLabel) {
+        if (!selectEl) return allLabel || "Все";
+        var all = [];
+        for (var i = 0; i < selectEl.options.length; i++) {
+          if (selectEl.options[i].value) all.push(selectEl.options[i].textContent);
+        }
+        var selected = selectedValues(selectEl).map(function (v) {
+          for (var j = 0; j < selectEl.options.length; j++) {
+            if (selectEl.options[j].value === v) return selectEl.options[j].textContent;
+          }
+          return v;
+        });
+        if (!selected.length || selected.length === all.length) return allLabel || selectEl.dataset.allLabel || "Все";
+        if (selected.length === 1) return selected[0];
+        if (selected.length === 2) return selected[0] + ", " + selected[1];
+        return "Выбрано: " + selected.length;
+      }
+      function filteredRates(programVal, bankVal, termVal) {
+        var key = filterCacheKey(programVal, bankVal, termVal);
+        var cached = filteredRatesCache.get(key);
+        if (cached) return cached;
+        var programList = normalizeFilterList(programVal);
+        var bankList = normalizeFilterList(bankVal);
+        var termList = normalizeFilterList(termVal);
+        var programSet = programList.length ? new Set(programList) : null;
+        var bankSet = bankList.length ? new Set(bankList) : null;
+        var termSet = termList.length ? new Set(termList) : null;
+        var filtered = rates.filter(function (r) {
+          if (programSet && !programSet.has(r.program)) return false;
+          if (bankSet && !bankSet.has(r.bank)) return false;
+          if (termSet && !termSet.has(r.discount_term)) return false;
+          return true;
+        });
+        filteredRatesCache.set(key, filtered);
+        return filtered;
+      }
+      function isBankUnspecified(selectEl, allCount) {
+        var values = selectedValues(selectEl);
+        return !values.length || values.length >= allCount;
+      }
+      function buildBaseScenarioFromRow(rateRow, mfc) {
+        var baseRate = rateRow._baseRate;
+        if (!Number.isFinite(baseRate) || baseRate <= 0) return null;
+        if (!(mfc > 0)) return null;
+        var down = mfc * 0.20;
+        var loan = Math.max(0, mfc - down);
+        if (!rowLoanLimitsOk(rateRow, loan)) return null;
+        var payment = annuityPaymentFromLoan(loan, baseRate, TOTAL_MONTHS);
+        var total = down + payment * TOTAL_MONTHS;
+        return {
+          rateRow: rateRow,
+          baseRate: baseRate,
+          baseDown: down,
+          baseLoan: loan,
+          basePayment: payment,
+          baseTotal: total
+        };
+      }
+      function chooseBaseScenario(pool, mfc, preferExpensive) {
+        var best = null;
+        for (var i = 0; i < pool.length; i++) {
+          var s = buildBaseScenarioFromRow(pool[i], mfc);
+          if (!s) continue;
+          if (!best) {
+            best = s;
+            continue;
+          }
+          if (preferExpensive ? (s.baseTotal > best.baseTotal) : (s.baseTotal < best.baseTotal)) {
+            best = s;
+          }
+        }
+        return best;
+      }
+      function renderBaseBlock(ui, baseScenario, noteText) {
+        ui.note.textContent = noteText || "ПВ 20%, базовая ставка из таблицы ставок.";
+        if (!baseScenario) {
+          ui.bank.textContent = "-";
+          ui.rate.textContent = "-";
+          ui.pv20.textContent = "-";
+          ui.ep.textContent = "-";
+          ui.total.textContent = "-";
+          return;
+        }
+        ui.bank.textContent = baseScenario.rateRow.bank + " • " + baseScenario.rateRow.program;
+        ui.rate.textContent = pct(baseScenario.baseRate, 2);
+        ui.pv20.textContent = money(baseScenario.baseDown);
+        ui.ep.textContent = money(baseScenario.basePayment);
+        ui.total.textContent = money(baseScenario.baseTotal);
+      }
+
+      function buildScenarioFromMfc(rateRow, mfc, targetPayment, bonusRub, layout, matCapRub) {
+        var annualRate = rateRow._annualRate;
+        var baseRate = rateRow._baseRate;
+        var commission = rateRow._commission;
+        if (!Number.isFinite(annualRate) || annualRate <= 0 || !Number.isFinite(commission) || commission < 0) return null;
+        var matCap = Number.isFinite(matCapRub) && matCapRub > 0 ? matCapRub : 0;
+
+        var paymentState = getPaymentScenarioState(rateRow, targetPayment);
+        if (!paymentState) return null;
+        var loanBody = paymentState.loanBody;
+        if (!rowLoanLimitsOk(rateRow, loanBody)) return null;
+
+        var subsidyAdd = commission * loanBody;
+        var dealPrice = mfc + bonusRub + subsidyAdd;
+        if (!Number.isFinite(dealPrice) || dealPrice <= 0) return null;
+        var downPaymentDeal = dealPrice - loanBody;
+        if (!Number.isFinite(downPaymentDeal) || downPaymentDeal < 0) return null;
+
+        var downPct = (downPaymentDeal / dealPrice) * 100;
+        var minPv = rateRow._minPv;
+        if (Number.isFinite(minPv) && downPct + 1e-9 < minPv) return null;
+
+        var finalPvRaw = downPaymentDeal - bonusRub - matCap;
+        var finalPv = Math.max(0, finalPvRaw);
+        var matCapUsed = Math.max(0, Math.min(matCap, downPaymentDeal - bonusRub));
+        var subsidyMonths = paymentState.subsidyMonths;
+        var remainingMonths = paymentState.remainingMonths;
+        var paymentDuring = paymentState.paymentDuring;
+        var postPayment = paymentState.postPayment;
+
+        var totalSubsidyRub = bonusRub + subsidyAdd;
+        var totalSubsidyPct = (totalSubsidyRub / dealPrice) * 100;
+        var bonusPctRef = (bonusRub / dealPrice) * 100;
+
+        var basePvPct = Number.isFinite(minPv) && minPv > 0 ? minPv : 20;
+        var baseDown = mfc * (basePvPct / 100);
+        var baseLoan = Math.max(0, mfc - baseDown);
+        var baseMonthly = annuityPaymentFromLoan(baseLoan, baseRate, TOTAL_MONTHS);
+        var baseTotal = baseDown + baseMonthly * TOTAL_MONTHS;
+
+        var selectedTotal = finalPv + paymentDuring * subsidyMonths + postPayment * remainingMonths;
+        var deltaVsBase = selectedTotal - baseTotal;
+
+        return {
+          layout: layout, rateRow: rateRow, annualRate: annualRate, baseRate: baseRate, commission: commission,
+          mfc: mfc, bonusRub: bonusRub, bonusPctRef: bonusPctRef, dealPrice: dealPrice, downPaymentDeal: downPaymentDeal,
+          finalPv: finalPv, matCapUsed: matCapUsed, matCapInput: matCap, downPct: downPct, loanBody: loanBody, paymentDuring: paymentDuring, postPayment: postPayment,
+          subsidyMonths: subsidyMonths, remainingMonths: remainingMonths, totalSubsidyRub: totalSubsidyRub,
+          totalSubsidyPct: totalSubsidyPct, selectedTotal: selectedTotal, deltaVsBase: deltaVsBase
+        };
+      }
+
+      function buildReverseScenario(rateRow, dealPrice, targetPayment, bonusRub, layout) {
+        var annualRate = rateRow._annualRate;
+        var commission = rateRow._commission;
+        if (!Number.isFinite(annualRate) || annualRate <= 0 || !Number.isFinite(commission) || commission < 0) return null;
+
+        var paymentState = getPaymentScenarioState(rateRow, targetPayment);
+        if (!paymentState) return null;
+        var loanBody = paymentState.loanBody;
+        if (!rowLoanLimitsOk(rateRow, loanBody)) return null;
+
+        var subsidyAdd = commission * loanBody;
+        var mfc = dealPrice - bonusRub - subsidyAdd;
+        if (!Number.isFinite(mfc) || mfc <= 0) return null;
+
+        return buildScenarioFromMfc(rateRow, mfc, targetPayment, bonusRub, layout, 0);
+      }
+      function reverseScenarioCacheKey(rateRow, dealPrice, targetPayment, bonusRub, layout) {
+        return rateRow._id + "|" +
+          Math.round(Number(dealPrice) || 0) + "|" +
+          Math.round(Number(targetPayment) || 0) + "|" +
+          Math.round(Number(bonusRub) || 0) + "|" +
+          String(layout || "");
+      }
+      function getReverseScenario(rateRow, dealPrice, targetPayment, bonusRub, layout) {
+        if (!rateRow) return null;
+        var key = reverseScenarioCache ? reverseScenarioCacheKey(rateRow, dealPrice, targetPayment, bonusRub, layout) : "";
+        if (reverseScenarioCache && reverseScenarioCache.has(key)) return reverseScenarioCache.get(key);
+        var scenario = buildReverseScenario(rateRow, dealPrice, targetPayment, bonusRub, layout);
+        if (reverseScenarioCache) reverseScenarioCache.set(key, scenario);
+        return scenario;
+      }
+      function buildReverseScenariosForPool(pool, dealPrice, targetPayment, bonusRub, layout) {
+        if (!pool || !pool.length) return [];
+        var out = [];
+        for (var i = 0; i < pool.length; i++) {
+          var scenario = getReverseScenario(pool[i], dealPrice, targetPayment, bonusRub, layout);
+          if (scenario) out.push(scenario);
+        }
+        return out;
+      }
+
+      function compareScenario(a, b) {
+        if (a.selectedTotal !== b.selectedTotal) return a.selectedTotal - b.selectedTotal;
+        if (a.finalPv !== b.finalPv) return a.finalPv - b.finalPv;
+        if (a.annualRate !== b.annualRate) return a.annualRate - b.annualRate;
+        return a.commission - b.commission;
+      }
+
+      function renderRows(tbody, emptyNode, rows, rowBuilder) {
+        tbody.innerHTML = "";
+        if (!rows.length) { emptyNode.style.display = "block"; return; }
+        emptyNode.style.display = "none";
+        tbody.innerHTML = rows.map(rowBuilder).join("");
+      }
+
+      var tableSortState = {
+        kcTable: { index: -1, dir: 1 },
+        rvTable: { index: -1, dir: 1 },
+        stTable: { index: -1, dir: 1 }
+      };
+
+      function setupColumnSorting(tableId, onChange) {
+        var table = document.getElementById(tableId);
+        if (!table) return;
+        var head = table.querySelector("thead");
+        if (!head) return;
+        var firstRow = head.querySelector("tr");
+        if (!firstRow) return;
+        var ths = Array.from(firstRow.children);
+        for (var i = 0; i < ths.length; i++) {
+          var th = ths[i];
+          th.classList.add("sortable-th");
+          th.dataset.baseLabel = th.textContent.trim();
+          (function (idx, thEl) {
+            thEl.addEventListener("click", function () {
+              var state = tableSortState[tableId] || { index: -1, dir: 1 };
+              if (state.index === idx) {
+                state.dir = state.dir === 1 ? -1 : 1;
+              } else {
+                state.index = idx;
+                state.dir = 1;
+              }
+              tableSortState[tableId] = state;
+              renderSortState(tableId);
+              onChange();
+            });
+          })(i, th);
+        }
+        renderSortState(tableId);
+      }
+
+      function renderSortState(tableId) {
+        var table = document.getElementById(tableId);
+        if (!table) return;
+        var firstRow = table.querySelector("thead tr");
+        if (!firstRow) return;
+        var ths = Array.from(firstRow.children);
+        var state = tableSortState[tableId] || { index: -1, dir: 1 };
+        for (var i = 0; i < ths.length; i++) {
+          var th = ths[i];
+          var base = th.dataset.baseLabel || th.textContent.replace(/\s*[▲▼]$/, "").trim();
+          th.dataset.baseLabel = base;
+          if (state.index === i) {
+            th.classList.add("active-sort");
+            th.textContent = base + (state.dir === 1 ? " ▲" : " ▼");
+          } else {
+            th.classList.remove("active-sort");
+            th.textContent = base;
+          }
+        }
+      }
+
+      function sortScenarios(tableId, scenarios, extractors) {
+        var rows = scenarios.slice();
+        var state = tableSortState[tableId];
+        if (!state || state.index < 0 || state.index >= extractors.length) return rows;
+        var dir = state.dir === -1 ? -1 : 1;
+        var extractor = extractors[state.index];
+        rows.sort(function (a, b) {
+          var av = extractor(a);
+          var bv = extractor(b);
+          var an = num(av);
+          var bn = num(bv);
+          var cmp = 0;
+          if (Number.isFinite(an) && Number.isFinite(bn)) {
+            cmp = an - bn;
+          } else {
+            cmp = String(av === null || av === undefined ? "" : av).localeCompare(
+              String(bv === null || bv === undefined ? "" : bv),
+              "ru",
+              { numeric: true, sensitivity: "base" }
+            );
+          }
+          if (Math.abs(cmp) < 1e-12) cmp = compareScenario(a, b);
+          return cmp * dir;
+        });
+        return rows;
+      }
+
+      var KC_EXTRACTORS = [
+        function (s) { return s.rateRow.bank; },
+        function (s) { return s.rateRow.program; },
+        function (s) { return s.rateRow.discount_term; },
+        function (s) { return s.annualRate * 100; },
+        function (s) { return s.commission * 100; },
+        function (s) { return s.mfc; },
+        function (s) { return s.dealPrice; },
+        function (s) { return s.downPaymentDeal; },
+        function (s) { return s.finalPv; },
+        function (s) { return s.downPct; },
+        function (s) { return s.paymentDuring; },
+        function (s) { return s.postPayment; },
+        function (s) { return s.totalSubsidyRub; },
+        function (s) { return s.selectedTotal; },
+        function (s) { return s.deltaVsBase; }
+      ];
+
+      var RV_EXTRACTORS = [
+        function (s) { return s.rateRow.bank; },
+        function (s) { return s.rateRow.program; },
+        function (s) { return s.rateRow.discount_term; },
+        function (s) { return s.annualRate * 100; },
+        function (s) { return s.commission * 100; },
+        function (s) { return s.dealPrice; },
+        function (s) { return s.mfc; },
+        function (s) { return s.bonusRub; },
+        function (s) { return s.bonusPctRef; },
+        function (s) { return s.downPaymentDeal; },
+        function (s) { return s.finalPv; },
+        function (s) { return s.downPct; },
+        function (s) { return s.postPayment; },
+        function (s) { return s.selectedTotal; },
+        function (s) { return s.deltaVsBase; }
+      ];
+
+      function scenarioListCacheKey(pool, mfc, payment, bonus, layout, matCap) {
+        return getPoolId(pool) + "|" +
+          Math.round(Number(mfc) || 0) + "|" +
+          Math.round(Number(payment) || 0) + "|" +
+          Math.round(Number(bonus) || 0) + "|" +
+          String(layout || "") + "|" +
+          Math.round(Number(matCap) || 0);
+      }
+      function buildScenariosForMfcPool(pool, mfc, payment, bonus, layout, matCap) {
+        if (!pool || !pool.length) return [];
+        var key = runScenarioListCache ? scenarioListCacheKey(pool, mfc, payment, bonus, layout, matCap) : "";
+        if (runScenarioListCache && runScenarioListCache.has(key)) return runScenarioListCache.get(key);
+        var out = [];
+        for (var i = 0; i < pool.length; i++) {
+          var scenario = buildScenarioFromMfc(pool[i], mfc, payment, bonus, layout, matCap);
+          if (scenario) out.push(scenario);
+        }
+        if (runScenarioListCache) runScenarioListCache.set(key, out);
+        return out;
+      }
+
+      function findMinTrueInRange(minValue, maxValue, testFn) {
+        var lo = Math.max(1, Math.round(minValue || 1));
+        var hi = Math.max(lo, Math.round(maxValue || lo));
+        if (!testFn(hi)) return null;
+        while (lo < hi) {
+          var mid = Math.floor((lo + hi) / 2);
+          if (testFn(mid)) hi = mid;
+          else lo = mid + 1;
+        }
+        return testFn(lo) ? lo : null;
+      }
+
+      function findMaxTrueInRange(minValue, maxValue, testFn) {
+        var lo = Math.max(1, Math.round(minValue || 1));
+        var hi = Math.max(lo, Math.round(maxValue || lo));
+        if (!testFn(lo)) return null;
+        while (lo < hi) {
+          var mid = Math.floor((lo + hi + 1) / 2);
+          if (testFn(mid)) lo = mid;
+          else hi = mid - 1;
+        }
+        return testFn(lo) ? lo : null;
+      }
+
+      function compareByPvThenTotal(a, b) {
+        if (a.finalPv !== b.finalPv) return a.finalPv - b.finalPv;
+        return compareScenario(a, b);
+      }
+      function pickBestByPv(scenarios, pvCap) {
+        var best = null;
+        var cap = Number.isFinite(pvCap) && pvCap > 0 ? pvCap : null;
+        for (var i = 0; i < scenarios.length; i++) {
+          var current = scenarios[i];
+          if (cap !== null && current.finalPv > cap + 1e-9) continue;
+          if (!best || compareByPvThenTotal(current, best) < 0) best = current;
+        }
+        return best;
+      }
+      function renderMiniRows(tbody, emptyNode, rows, rowBuilder) {
+        tbody.innerHTML = "";
+        if (!rows.length) { emptyNode.style.display = "block"; return; }
+        emptyNode.style.display = "none";
+        tbody.innerHTML = rows.map(rowBuilder).join("");
+      }
+      function debounce(fn, wait) {
+        var t = 0;
+        return function () {
+          var args = arguments;
+          clearTimeout(t);
+          t = setTimeout(function () { fn.apply(null, args); }, wait || 120);
+        };
+      }
+      function setSelectValues(selectEl, values) {
+        if (!selectEl) return;
+        var set = new Set((values || []).filter(Boolean));
+        for (var i = 0; i < selectEl.options.length; i++) {
+          var opt = selectEl.options[i];
+          opt.selected = set.has(opt.value);
+        }
+        selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      function setInputValue(inputEl, value) {
+        if (!inputEl) return;
+        inputEl.value = intFmt(Math.round(value));
+      }
+      var TERM_SLOTS = [
+        { label: "12 месяцев", months: 12 },
+        { label: "24 месяца", months: 24 },
+        { label: "36 месяцев", months: 36 },
+        { label: "48 месяцев", months: 48 },
+        { label: "60 месяцев", months: 60 },
+        { label: "120 месяцев", months: 120 },
+        { label: "Весь срок", all: true }
+      ];
+      function termFitsSlot(termText, slot) {
+        var t = String(termText || "").toLowerCase();
+        if (slot.all) return t.indexOf("весь срок") !== -1 || t.indexOf("на весь") !== -1;
+        return parseDiscountTermMonths(termText, TOTAL_MONTHS) === slot.months;
+      }
+      function buildBestByTermRows(poolByProgramBank, scenarioBuilder) {
+        var rows = [];
+        for (var i = 0; i < TERM_SLOTS.length; i++) {
+          var slot = TERM_SLOTS[i];
+          var slotPool = poolByProgramBank.filter(function (r) { return termFitsSlot(r.discount_term, slot); });
+          var slotScenarios = slotPool.map(scenarioBuilder).filter(Boolean);
+          var best = pickBestByPv(slotScenarios);
+          if (!best) continue;
+          rows.push({ termLabel: slot.label, s: best });
+        }
+        return rows;
+      }
+      function termMonthsFromScenario(s) {
+        return s.rateRow._termMonths;
+      }
+      function uniqueSortedTermMonths(pool) {
+        return Object.keys(groupPoolByTermMonths(pool)).map(function (key) {
+          return Number(key);
+        }).sort(function (a, b) { return a - b; });
+      }
+      function scenariosForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap) {
+        var grouped = groupPoolByTermMonths(poolAllTerms);
+        var poolTerm = grouped[String(termMonths)] || [];
+        return buildScenariosForMfcPool(poolTerm, mfc, payment, bonus, layout, matCap);
+      }
+      function bestScenarioForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap, pvCap) {
+        return pickBestByPv(scenariosForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap), pvCap);
+      }
+      function minPvForTermAtPayment(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap) {
+        var sc = scenariosForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap);
+        var best = pickBestByPv(sc);
+        if (!best) return null;
+        return { pv: Math.round(best.finalPv), scenario: best };
+      }
+      function maxAllowedLoanForScenario(rateRow, dealBase) {
+        var maxLoan = Number.isFinite(rateRow._loanMax) ? rateRow._loanMax : Infinity;
+        if (rateRow._familyOrIt) maxLoan = Math.min(maxLoan, FAMILY_IT_CAP);
+        var minPv = rateRow._minPv;
+        if (Number.isFinite(minPv) && minPv > 0) {
+          var share = minPv / 100;
+          var denom = 1 - rateRow._commission * (1 - share);
+          if (!(denom > 1e-12)) return 0;
+          maxLoan = Math.min(maxLoan, (dealBase * (1 - share)) / denom);
+        }
+        return maxLoan;
+      }
+      function candidateMinPaymentForRow(rateRow, mfc, pvCap, bonus, matCap) {
+        var lowerLoan = Number.isFinite(rateRow._loanMin) ? rateRow._loanMin : 0;
+        if (pvCap > 0) {
+          var coeff = 1 - rateRow._commission;
+          if (coeff <= 1e-12) {
+            if (mfc - matCap > pvCap + 1e-9) return null;
+          } else {
+            lowerLoan = Math.max(lowerLoan, Math.max(0, (mfc - matCap - pvCap) / coeff));
+          }
+        }
+        var upperLoan = maxAllowedLoanForScenario(rateRow, mfc + bonus);
+        if (!(upperLoan >= lowerLoan - 1e-9)) return null;
+        return Math.max(1, Math.ceil(annuityPaymentFromLoan(Math.max(0, lowerLoan), rateRow._annualRate, TOTAL_MONTHS)));
+      }
+      function minPaymentForPoolAtPv(pool, mfc, startPayment, maxPayment, pvCap, bonus, layout, matCap) {
+        var start = Math.max(1, Math.round(startPayment));
+        var limit = Math.max(start, Math.round(maxPayment));
+        var bestPay = null;
+        var bestScenario = null;
+        for (var i = 0; i < pool.length; i++) {
+          var candidate = candidateMinPaymentForRow(pool[i], mfc, pvCap, bonus, matCap);
+          if (!Number.isFinite(candidate) || candidate < start || candidate > limit) continue;
+          var candidateScenario = buildScenarioFromMfc(pool[i], mfc, candidate, bonus, layout, matCap);
+          if (!candidateScenario) continue;
+          if (pvCap > 0 && candidateScenario.finalPv > pvCap + 1e-9) continue;
+          if (bestPay === null || candidate < bestPay || (candidate === bestPay && compareByPvThenTotal(candidateScenario, bestScenario) < 0)) {
+            bestPay = candidate;
+            bestScenario = candidateScenario;
+          }
+        }
+        if (bestPay === null) return null;
+        var scenarioAtBestPayment = pickBestByPv(buildScenariosForMfcPool(pool, mfc, bestPay, bonus, layout, matCap), pvCap) || bestScenario;
+        return scenarioAtBestPayment ? { payment: bestPay, scenario: scenarioAtBestPayment } : null;
+      }
+      function minPaymentForTermAtPv(poolAllTerms, termMonths, mfc, startPayment, maxPayment, pvCap, bonus, layout, matCap) {
+        var grouped = groupPoolByTermMonths(poolAllTerms);
+        var poolTerm = grouped[String(termMonths)] || [];
+        return minPaymentForPoolAtPv(poolTerm, mfc, startPayment, maxPayment, pvCap, bonus, layout, matCap);
+      }
+      function combinedEpPvForTerm(poolAllTerms, termMonths, mfc, currentPayment, currentPv, targetPayment, targetPv, bonus, layout, matCap) {
+        var alphas = [0.5, 0.6, 0.7, 0.8, 0.9, 1];
+        for (var i = 0; i < alphas.length; i++) {
+          var a = alphas[i];
+          var pmt = Math.round(currentPayment + (targetPayment - currentPayment) * a);
+          var pv = Math.round(currentPv + (targetPv - currentPv) * a);
+          var sc = bestScenarioForExactTerm(poolAllTerms, termMonths, mfc, pmt, bonus, layout, matCap, pv);
+          if (sc) return { payment: pmt, pv: pv, scenario: sc };
+        }
+        return null;
+      }
+      function normalizeRecoRows(rows, currentPayment, currentPv) {
+        var map = Object.create(null);
+        return rows.filter(function (r) {
+          if (!r || !r.scenario) return false;
+          if (Math.abs(r.epValue - currentPayment) < 1 && Math.abs(r.pvValue - currentPv) < 1) return false;
+          var key = r.label + "|" + Math.round(r.epValue) + "|" + Math.round(r.pvValue);
+          if (map[key]) return false;
+          map[key] = true;
+          return true;
+        });
+      }
+      function buildRecommendationRowsForCalc(opts) {
+        var poolCurrent = opts.poolCurrent;
+        var poolAllTerms = opts.poolAllTerms;
+        var mfc = opts.mfc;
+        var payment = opts.payment;
+        var pvLimit = opts.pvLimit;
+        var bonus = opts.bonus;
+        var layout = opts.layout;
+        var matCap = opts.matCap;
+        var paymentMax = opts.paymentMax || 1500000;
+        var currentPv = Math.max(0, Math.round(pvLimit || 0));
+        var rows = [];
+
+        function bestOnCurrentPool(testPayment, testPv) {
+          return pickBestByPv(buildScenariosForMfcPool(poolCurrent, mfc, testPayment, bonus, layout, matCap), testPv);
+        }
+
+        var currentScenariosNoPv = buildScenariosForMfcPool(poolCurrent, mfc, payment, bonus, layout, matCap);
+        var bestCurrentNoPv = pickBestByPv(currentScenariosNoPv);
+        var bestCurrentWithPv = bestOnCurrentPool(payment, currentPv);
+
+        if (bestCurrentWithPv) {
+          if (currentPv > 0 && bestCurrentNoPv && bestCurrentNoPv.finalPv + 1e-9 < currentPv) {
+            var pvDown = Math.ceil(bestCurrentNoPv.finalPv);
+            var sPvDown = bestOnCurrentPool(payment, pvDown);
+            if (sPvDown) {
+              rows.push({
+                label: "Рекомендация по уменьшению ПВ",
+                kind: "decrease",
+                epValue: payment,
+                pvValue: pvDown,
+                scenario: sPvDown
+              });
+            }
+          }
+          if (payment > 1) {
+            var epDown = minPaymentForPoolAtPv(poolCurrent, mfc, 1, payment, currentPv, bonus, layout, matCap);
+            if (epDown && epDown.payment + 1e-9 < payment) {
+              if (epDown.scenario) {
+                rows.push({
+                  label: "Рекомендация по уменьшению ЕП",
+                  kind: "decrease",
+                  epValue: epDown.payment,
+                  pvValue: currentPv,
+                  scenario: epDown.scenario
+                });
+              }
+            }
+          }
+        }
+
+        var allCurrentPaymentScenarios = buildScenariosForMfcPool(poolAllTerms, mfc, payment, bonus, layout, matCap);
+        var eligibleCurrentPayment = allCurrentPaymentScenarios.filter(function (s) {
+          return currentPv > 0 ? s.finalPv <= currentPv + 1e-9 : true;
+        });
+        var currentMaxTerm = eligibleCurrentPayment.length
+          ? Math.max.apply(null, eligibleCurrentPayment.map(termMonthsFromScenario))
+          : 0;
+        var targetTerms = uniqueSortedTermMonths(poolAllTerms).filter(function (t) {
+          return t > currentMaxTerm;
+        }).slice(0, 2);
+
+        var pvIncByTarget = [];
+        var epIncByTarget = [];
+        var pvRowsByTarget = [];
+        var epRowsByTarget = [];
+        for (var i = 0; i < targetTerms.length; i++) {
+          var term = targetTerms[i];
+          var pvLabel = i === 0
+            ? "Рекомендация по увеличению ПВ для увеличения срока"
+            : "Рекомендация по увеличению ПВ для увеличения еще большего срока";
+          var epLabel = i === 0
+            ? "Рекомендация по увеличению ЕП для увеличения срока"
+            : "Рекомендация по увеличению ЕП для увеличения еще чуть большего срока";
+
+          var pvUp = minPvForTermAtPayment(poolAllTerms, term, mfc, payment, bonus, layout, matCap);
+          if (pvUp && pvUp.pv > currentPv + 1e-9) {
+            var sPvUp = bestScenarioForExactTerm(poolAllTerms, term, mfc, payment, bonus, layout, matCap, pvUp.pv) || pvUp.scenario;
+            if (sPvUp) {
+              pvRowsByTarget[i] = {
+                label: pvLabel,
+                kind: "increase",
+                epValue: payment,
+                pvValue: pvUp.pv,
+                scenario: sPvUp
+              };
+              pvIncByTarget[i] = { value: pvUp.pv, term: term };
+            }
+          }
+
+          var epUp = minPaymentForTermAtPv(poolAllTerms, term, mfc, Math.max(1, payment + 1), paymentMax, currentPv, bonus, layout, matCap);
+          if (epUp && epUp.payment > payment + 1e-9) {
+            epRowsByTarget[i] = {
+              label: epLabel,
+              kind: "increase",
+              epValue: epUp.payment,
+              pvValue: currentPv,
+              scenario: epUp.scenario
+            };
+            epIncByTarget[i] = { value: epUp.payment, term: term };
+          }
+        }
+
+        if (pvRowsByTarget[0]) rows.push(pvRowsByTarget[0]);
+        if (pvRowsByTarget[1]) rows.push(pvRowsByTarget[1]);
+        if (epRowsByTarget[0]) rows.push(epRowsByTarget[0]);
+        if (epRowsByTarget[1]) rows.push(epRowsByTarget[1]);
+
+        for (var j = 0; j < targetTerms.length; j++) {
+          if (!pvIncByTarget[j] || !epIncByTarget[j]) continue;
+          var comboLabel = j === 0
+            ? "Рекомендация по увеличению ЕП + ПВ"
+            : "Рекомендация по увеличению ЕП + ПВ на чуть больший срок";
+          var combo = combinedEpPvForTerm(
+            poolAllTerms,
+            targetTerms[j],
+            mfc,
+            payment,
+            currentPv,
+            epIncByTarget[j].value,
+            pvIncByTarget[j].value,
+            bonus,
+            layout,
+            matCap
+          );
+          if (!combo) continue;
+          rows.push({
+            label: comboLabel,
+            kind: "increase",
+            epValue: combo.payment,
+            pvValue: combo.pv,
+            scenario: combo.scenario
+          });
+        }
+        var normalized = normalizeRecoRows(rows, payment, currentPv);
+        return {
+          decreaseRows: normalized.filter(function (r) { return r.kind === "decrease"; }).slice(0, 2),
+          increaseRows: normalized.filter(function (r) { return r.kind !== "decrease"; }).slice(0, 8)
+        };
+      }
+
+      var rateIdSeq = 0;
+      var rates = data.rates.map(function (r) {
+        if (!r || !r.bank || !r.program || !r.discount_term) return null;
+        var cr = num(r.client_rate);
+        var cm = num(r.commission);
+        if (!Number.isFinite(cr) || !Number.isFinite(cm)) return null;
+        var br = num(r.base_rate);
+        r._id = ++rateIdSeq;
+        r._annualRate = cr;
+        r._commission = cm;
+        r._baseRate = Number.isFinite(br) && br >= 0 ? br : cr;
+        r._minPv = num(r.min_pv);
+        r._loanMin = num(r.loan_min);
+        r._loanMax = num(r.loan_max);
+        r._termMonths = parseDiscountTermMonths(r.discount_term, TOTAL_MONTHS);
+        r._familyOrIt = hasFamilyOrIt(r.program);
+        return r;
+      }).filter(Boolean);
+
+      var allPrograms = uniq(rates.map(function (r) { return r.program; }));
+      var allBanks = uniq(rates.map(function (r) { return r.bank; }));
+      var allTerms = uniq(rates.map(function (r) { return r.discount_term; })).sort(function (a, b) { return termSort(a) - termSort(b); });
+      var ratesSourceEl = document.getElementById("ratesSource");
+      if (ratesSourceEl) {
+        ratesSourceEl.textContent = (data.sources && data.sources.rates_file) ? data.sources.rates_file : "Ставки NEW.xlsx";
+      }
+
+      function populateSelect(selectEl, values, allLabel) {
+        var prev = selectedValues(selectEl);
+        selectEl.innerHTML = "";
+        selectEl.multiple = true;
+        selectEl.dataset.allLabel = allLabel || "Все";
+        for (var i = 0; i < values.length; i++) {
+          var opt = document.createElement("option");
+          opt.value = values[i];
+          opt.textContent = values[i];
+          opt.selected = prev.length ? prev.indexOf(values[i]) !== -1 : true;
+          selectEl.appendChild(opt);
+        }
+      }
+      function populateLayoutSelect(selectEl) {
+        var prev = selectedValues(selectEl);
+        selectEl.innerHTML = "";
+        selectEl.multiple = true;
+        selectEl.dataset.allLabel = "Все планировки";
+        for (var i = 0; i < LAYOUTS.length; i++) {
+          var opt = document.createElement("option");
+          opt.value = LAYOUTS[i];
+          opt.textContent = LAYOUTS[i];
+          opt.selected = prev.length ? prev.indexOf(LAYOUTS[i]) !== -1 : true;
+          selectEl.appendChild(opt);
+        }
+      }
+      var customSelectEntries = [];
+      function closeCustomSelect(entry) {
+        if (!entry) return;
+        entry.root.classList.remove("open");
+        entry.trigger.setAttribute("aria-expanded", "false");
+      }
+      function closeAllCustomSelects(except) {
+        for (var i = 0; i < customSelectEntries.length; i++) {
+          if (customSelectEntries[i] !== except) closeCustomSelect(customSelectEntries[i]);
+        }
+      }
+      function mountCustomSelect(selectEl) {
+        if (!selectEl || selectEl.dataset.customSelectReady === "1") return;
+        selectEl.dataset.customSelectReady = "1";
+        selectEl.classList.add("native-select-hidden");
+
+        var root = document.createElement("div");
+        root.className = "custom-select";
+        var trigger = document.createElement("button");
+        trigger.type = "button";
+        trigger.className = "custom-select-trigger";
+        trigger.setAttribute("aria-expanded", "false");
+        var valueSpan = document.createElement("span");
+        valueSpan.className = "custom-select-value";
+        var arrowSpan = document.createElement("span");
+        arrowSpan.className = "custom-select-arrow";
+        arrowSpan.textContent = "▾";
+        trigger.appendChild(valueSpan);
+        trigger.appendChild(arrowSpan);
+        var menu = document.createElement("div");
+        menu.className = "custom-select-menu";
+        root.appendChild(trigger);
+        root.appendChild(menu);
+        selectEl.insertAdjacentElement("afterend", root);
+
+        var entry = { select: selectEl, root: root, trigger: trigger, menu: menu, value: valueSpan };
+        customSelectEntries.push(entry);
+
+        function syncLabel() {
+          valueSpan.textContent = selectedSummary(selectEl, selectEl.dataset.allLabel || "Все");
+        }
+        function renderOptions() {
+          menu.innerHTML = "";
+          if (selectEl.multiple) {
+            var actions = document.createElement("div");
+            actions.className = "custom-select-actions";
+            var pickAll = document.createElement("button");
+            pickAll.type = "button";
+            pickAll.className = "custom-select-action";
+            pickAll.textContent = "Все";
+            pickAll.addEventListener("click", function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              for (var ai = 0; ai < selectEl.options.length; ai++) selectEl.options[ai].selected = true;
+              syncLabel();
+              renderOptions();
+              selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+            });
+            var clearAll = document.createElement("button");
+            clearAll.type = "button";
+            clearAll.className = "custom-select-action";
+            clearAll.textContent = "Очистить";
+            clearAll.addEventListener("click", function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              for (var ci = 0; ci < selectEl.options.length; ci++) selectEl.options[ci].selected = false;
+              syncLabel();
+              renderOptions();
+              selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+            });
+            actions.appendChild(pickAll);
+            actions.appendChild(clearAll);
+            menu.appendChild(actions);
+          }
+          for (var i = 0; i < selectEl.options.length; i++) {
+            (function (idx) {
+              var opt = selectEl.options[idx];
+              var item = document.createElement("button");
+              item.type = "button";
+              item.className = "custom-select-option";
+              item.textContent = opt.textContent;
+              if (opt.selected) item.classList.add("selected");
+              if (opt.disabled) item.disabled = true;
+              item.addEventListener("click", function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                if (opt.disabled) return;
+                if (selectEl.multiple) {
+                  opt.selected = !opt.selected;
+                  syncLabel();
+                  renderOptions();
+                  selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+                } else {
+                  if (selectEl.selectedIndex !== idx) {
+                    selectEl.selectedIndex = idx;
+                    selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+                  } else {
+                    syncLabel();
+                    renderOptions();
+                  }
+                  closeCustomSelect(entry);
+                }
+              });
+              menu.appendChild(item);
+            })(i);
+          }
+        }
+
+        trigger.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var opening = !root.classList.contains("open");
+          closeAllCustomSelects(opening ? entry : null);
+          if (opening) {
+            root.classList.add("open");
+            trigger.setAttribute("aria-expanded", "true");
+            var selectedBtn = menu.querySelector(".custom-select-option.selected");
+            if (selectedBtn) selectedBtn.scrollIntoView({ block: "nearest" });
+          } else {
+            closeCustomSelect(entry);
+          }
+        });
+        menu.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+        });
+        selectEl.addEventListener("change", function () {
+          syncLabel();
+          renderOptions();
+        });
+        new MutationObserver(function () {
+          syncLabel();
+          renderOptions();
+        }).observe(selectEl, { childList: true, subtree: false });
+
+        syncLabel();
+        renderOptions();
+      }
+      document.addEventListener("click", function (ev) {
+        for (var i = 0; i < customSelectEntries.length; i++) {
+          var entry = customSelectEntries[i];
+          if (!entry.root.contains(ev.target)) closeCustomSelect(entry);
+        }
+      });
+      document.addEventListener("keydown", function (ev) {
+        if (ev.key === "Escape") closeAllCustomSelects(null);
+      });
+      function mountAllCustomSelects() {
+        var selects = document.querySelectorAll(".page select");
+        for (var i = 0; i < selects.length; i++) mountCustomSelect(selects[i]);
+      }
+
+      var kc = {
+        layout: document.getElementById("kcLayout"), program: document.getElementById("kcProgram"),
+        payment: document.getElementById("kcPayment"), pv: document.getElementById("kcPv"),
+        repair: kcWithRepair, run: document.getElementById("kcRun"), undo: document.getElementById("kcUndo"), redo: document.getElementById("kcRedo"),
+        body: document.getElementById("kcBody"), empty: document.getElementById("kcEmpty"), status: document.getElementById("kcStatus"),
+        count: document.getElementById("kcCount"), minPv: document.getElementById("kcMinPv"), best: document.getElementById("kcBest"), minDeal: document.getElementById("kcMinDeal"),
+        bestTermsBody: document.getElementById("kcBestTermsBody"), bestTermsEmpty: document.getElementById("kcBestTermsEmpty"),
+        recoDownBody: document.getElementById("kcRecoDownBody"), recoDownEmpty: document.getElementById("kcRecoDownEmpty"),
+        recoBody: document.getElementById("kcRecoBody"), recoEmpty: document.getElementById("kcRecoEmpty"),
+        baseNote: document.getElementById("kcBaseNote"), baseBank: document.getElementById("kcBaseBank"), baseRate: document.getElementById("kcBaseRate"),
+        basePv20: document.getElementById("kcBasePv20"), baseEp: document.getElementById("kcBaseEp"), baseTotal: document.getElementById("kcBaseTotal")
+      };
+      var rv = {
+        layout: document.getElementById("rvLayout"), program: document.getElementById("rvProgram"), bank: document.getElementById("rvBank"), term: document.getElementById("rvTerm"),
+        deal: document.getElementById("rvDeal"), payment: document.getElementById("rvPayment"), bonus: document.getElementById("rvBonus"), finalPv: document.getElementById("rvFinalPv"), run: document.getElementById("rvRun"),
+        body: document.getElementById("rvBody"), empty: document.getElementById("rvEmpty"), status: document.getElementById("rvStatus"),
+        count: document.getElementById("rvCount"), minMfc: document.getElementById("rvMinMfc"), maxMfc: document.getElementById("rvMaxMfc"), medMfc: document.getElementById("rvMedMfc"),
+        recoBody: document.getElementById("rvRecoBody"), recoEmpty: document.getElementById("rvRecoEmpty")
+      };
+      var st = {
+        program: document.getElementById("stProgram"), bank: document.getElementById("stBank"), term: document.getElementById("stTerm"),
+        mfc: document.getElementById("stMfc"), payment: document.getElementById("stPayment"), bonus: document.getElementById("stBonus"),
+        matCap: document.getElementById("stMatCap"), useMatCap: document.getElementById("stUseMatCap"), pvMax: document.getElementById("stPvMax"), run: document.getElementById("stRun"),
+        body: document.getElementById("stBody"), empty: document.getElementById("stEmpty"), status: document.getElementById("stStatus"),
+        count: document.getElementById("stCount"), minPv: document.getElementById("stMinPv"), minDeal: document.getElementById("stMinDeal"), minCost: document.getElementById("stMinCost"),
+        bestTermsBody: document.getElementById("stBestTermsBody"), bestTermsEmpty: document.getElementById("stBestTermsEmpty"),
+        recoDownBody: document.getElementById("stRecoDownBody"), recoDownEmpty: document.getElementById("stRecoDownEmpty"),
+        recoBody: document.getElementById("stRecoBody"), recoEmpty: document.getElementById("stRecoEmpty"),
+        baseNote: document.getElementById("stBaseNote"), baseBank: document.getElementById("stBaseBank"), baseRate: document.getElementById("stBaseRate"),
+        basePv20: document.getElementById("stBasePv20"), baseEp: document.getElementById("stBaseEp"), baseTotal: document.getElementById("stBaseTotal")
+      };
+
+      populateLayoutSelect(kc.layout);
+      populateSelect(kc.program, allPrograms, "Все типы ипотеки");
+      mountCustomSelect(kc.layout);
+      mountCustomSelect(kc.program);
+
+      function runKcSync() {
+        var layouts = selectedValues(kc.layout);
+        if (!layouts.length) layouts = LAYOUTS.slice();
+        var layoutInfo = [];
+        for (var li = 0; li < layouts.length; li++) {
+          var layoutName = layouts[li];
+          var m = getLayoutPrice(layoutName);
+          if (m > 0) layoutInfo.push({ layout: layoutName, mfc: m });
+        }
+        var payment = asIntText(kc.payment);
+        var pvLimit = asIntText(kc.pv);
+        var bonus = 0;
+        var matCap = 0;
+        var programVals = selectedValues(kc.program);
+        var bankVals = [];
+        var termVals = [];
+        resetRunCaches();
+        var pool = filteredRates(programVals, bankVals, termVals);
+        var poolByProgramBank = filteredRates(programVals, bankVals, []);
+        var bankUnspecified = true;
+        var baseKcUi = {
+          note: kc.baseNote, bank: kc.baseBank, rate: kc.baseRate, pv20: kc.basePv20, ep: kc.baseEp, total: kc.baseTotal
+        };
+        if (layoutInfo.length && pool.length) {
+          var baseLayoutRef = layoutInfo.slice().sort(function (a, b) { return a.mfc - b.mfc; })[0];
+          var baseScenarioKc = chooseBaseScenario(pool, baseLayoutRef.mfc, bankUnspecified);
+          var baseNoteKc = "ПВ 20%, базовая ставка из таблицы ставок.";
+          if (bankUnspecified) baseNoteKc += " Показан самый дорогой базовый вариант среди всех банков.";
+          if (layoutInfo.length > 1) baseNoteKc += " База показана для минимальной цены среди выбранных планировок (" + baseLayoutRef.layout + ").";
+          renderBaseBlock(baseKcUi, baseScenarioKc, baseNoteKc);
+        } else {
+          renderBaseBlock(baseKcUi, null, "ПВ 20%, базовая ставка из таблицы ставок.");
+        }
+
+        if (!layoutInfo.length) {
+          setStatus(kc.status, "Выберите хотя бы одну планировку.", false);
+          renderRows(kc.body, kc.empty, [], function () { return ""; });
+          renderMiniRows(kc.bestTermsBody, kc.bestTermsEmpty, [], function () { return ""; });
+          renderMiniRows(kc.recoDownBody, kc.recoDownEmpty, [], function () { return ""; });
+          renderMiniRows(kc.recoBody, kc.recoEmpty, [], function () { return ""; });
+          kc.count.textContent = "0";
+          kc.minPv.textContent = kc.best.textContent = kc.minDeal.textContent = "-";
+          return;
+        }
+        if (!(payment > 0)) {
+          setStatus(kc.status, "Введите желаемый ЕП > 0.", false);
+          renderRows(kc.body, kc.empty, [], function () { return ""; });
+          renderMiniRows(kc.bestTermsBody, kc.bestTermsEmpty, [], function () { return ""; });
+          renderMiniRows(kc.recoDownBody, kc.recoDownEmpty, [], function () { return ""; });
+          renderMiniRows(kc.recoBody, kc.recoEmpty, [], function () { return ""; });
+          kc.count.textContent = "0";
+          kc.minPv.textContent = kc.best.textContent = kc.minDeal.textContent = "-";
+          return;
+        }
+
+        var scenariosAtCurrentPayment = [];
+        for (var si = 0; si < layoutInfo.length; si++) {
+          var sc = buildScenariosForMfcPool(pool, layoutInfo[si].mfc, payment, bonus, layoutInfo[si].layout, matCap);
+          if (sc && sc.length) scenariosAtCurrentPayment = scenariosAtCurrentPayment.concat(sc);
+        }
+        var scenarios = scenariosAtCurrentPayment.slice();
+        if (pvLimit > 0) scenarios = scenarios.filter(function (s) { return s.finalPv <= pvLimit + 1e-9; });
+        scenarios.sort(compareScenario);
+        var sortedScenarios = sortScenarios("kcTable", scenarios, KC_EXTRACTORS);
+
+        kc.count.textContent = String(scenarios.length);
+        if (scenarios.length) {
+          var best = scenarios[0];
+          var minPvValue = scenarios[0].finalPv;
+          var minDealValue = scenarios[0].dealPrice;
+          for (var svi = 1; svi < scenarios.length; svi++) {
+            if (scenarios[svi].finalPv < minPvValue) minPvValue = scenarios[svi].finalPv;
+            if (scenarios[svi].dealPrice < minDealValue) minDealValue = scenarios[svi].dealPrice;
+          }
+          kc.minPv.textContent = money(minPvValue);
+          kc.best.textContent = best.rateRow.bank + " • " + best.rateRow.program;
+          kc.minDeal.textContent = money(minDealValue);
+        } else {
+          kc.minPv.textContent = kc.best.textContent = kc.minDeal.textContent = "-";
+        }
+
+        var minMfc = Math.min.apply(null, layoutInfo.map(function (x) { return x.mfc; }));
+        var maxMfc = Math.max.apply(null, layoutInfo.map(function (x) { return x.mfc; }));
+        var primaryScenario = scenarios.length ? scenarios[0] : (scenariosAtCurrentPayment.length ? scenariosAtCurrentPayment[0] : null);
+        var primaryLayout = (primaryScenario && primaryScenario.layout) || layoutInfo[0].layout;
+        var primaryMfc = (primaryScenario && primaryScenario.mfc) || layoutInfo[0].mfc;
+        var statusParts = [
+          "Планировки: " + selectedSummary(kc.layout, "Все планировки") + ".",
+          "Внутренняя цена: " + (minMfc === maxMfc ? money(minMfc) : (money(minMfc) + " — " + money(maxMfc))) + ".",
+          "Ремонт: " + (isRepairEnabled() ? "включен." : "выключен."),
+          "Тип ипотеки: " + selectedSummary(kc.program, "Все типы ипотеки") + ".",
+          "Банки: все.",
+          "Сроки субсидии: все.",
+          "ЕП: " + money(payment) + ".",
+          "Лимит ПВ клиента: " + money(pvLimit) + ".",
+          "Сценариев: " + scenarios.length + "."
+        ];
+
+        var recoPack = buildRecommendationRowsForCalc({
+          poolCurrent: pool,
+          poolAllTerms: poolByProgramBank,
+          mfc: primaryMfc,
+          payment: payment,
+          pvLimit: pvLimit,
+          bonus: bonus,
+          layout: primaryLayout,
+          matCap: matCap,
+          paymentMax: 1500000
+        });
+        var recoDownRows = recoPack.decreaseRows || [];
+        var recoRows = recoPack.increaseRows || [];
+        renderMiniRows(kc.recoDownBody, kc.recoDownEmpty, recoDownRows, function (r) {
+          var s = r.scenario;
+          return "<tr class='apply-row' data-apply='kc' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
+            "<td>" + r.label + "</td>" +
+            "<td class='num'><strong>" + money(r.epValue) + "</strong></td>" +
+            "<td class='num'><strong>" + money(r.pvValue) + "</strong></td>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td>" + s.rateRow.discount_term + "</td>" +
+            "<td class='num'>" + money(s.finalPv) + "</td>" +
+            "<td class='num'>" + money(s.dealPrice) + "</td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "</tr>";
+        });
+        renderMiniRows(kc.recoBody, kc.recoEmpty, recoRows, function (r) {
+          var s = r.scenario;
+          return "<tr class='apply-row' data-apply='kc' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
+            "<td>" + r.label + "</td>" +
+            "<td class='num'><strong>" + money(r.epValue) + "</strong></td>" +
+            "<td class='num'><strong>" + money(r.pvValue) + "</strong></td>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td>" + s.rateRow.discount_term + "</td>" +
+            "<td class='num'>" + money(s.finalPv) + "</td>" +
+            "<td class='num'>" + money(s.dealPrice) + "</td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "</tr>";
+        });
+
+        var bestTermRows = buildBestByTermRows(poolByProgramBank, function (r) {
+          var bestLocal = null;
+          for (var i = 0; i < layoutInfo.length; i++) {
+            var s = buildScenarioFromMfc(r, layoutInfo[i].mfc, payment, bonus, layoutInfo[i].layout, matCap);
+            if (!s) continue;
+            if (pvLimit > 0 && s.finalPv > pvLimit + 1e-9) continue;
+            if (!bestLocal || compareScenario(s, bestLocal) < 0) bestLocal = s;
+          }
+          return bestLocal;
+        });
+        renderMiniRows(kc.bestTermsBody, kc.bestTermsEmpty, bestTermRows, function (row) {
+          var s = row.s;
+          return "<tr class='apply-row' data-apply='kc' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + s.paymentDuring + "' data-pv='" + s.finalPv + "'>" +
+            "<td>" + row.termLabel + "</td>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td class='num'>" + pct(s.annualRate, 2) + "</td>" +
+            "<td class='num'>" + pct(s.commission, 2) + "</td>" +
+            "<td class='num'>" + money(s.downPaymentDeal) + "</td>" +
+            "<td class='num'><strong>" + money(s.finalPv) + "</strong></td>" +
+            "<td class='num'>" + money(s.dealPrice) + "</td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "</tr>";
+        });
+
+        if (!scenarios.length) {
+          setStatus(kc.status, statusParts.join(" ") + " Нет сценариев под текущие условия. Смотрите блок «Рекомендации».", true);
+        } else {
+          setStatus(kc.status, statusParts.join(" "), false);
+        }
+
+        renderRows(kc.body, kc.empty, sortedScenarios.slice(0, 300), function (s) {
+          return "<tr>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td>" + s.rateRow.discount_term + "</td>" +
+            "<td class='num'>" + pct(s.annualRate, 2) + "</td>" +
+            "<td class='num'>" + pct(s.commission, 2) + "</td>" +
+            "<td class='num'>" + money(s.mfc) + "</td>" +
+            "<td class='num'><strong>" + money(s.dealPrice) + "</strong></td>" +
+            "<td class='num'>" + money(s.downPaymentDeal) + "</td>" +
+            "<td class='num'><strong>" + money(s.finalPv) + "</strong></td>" +
+            "<td class='num'>" + pctPlain(s.downPct, 2) + "</td>" +
+            "<td class='num'>" + money(s.paymentDuring) + "</td>" +
+            "<td class='num'>" + money(s.postPayment) + "</td>" +
+            "<td class='num'><strong>" + money(s.totalSubsidyRub) + "</strong><br><span class='muted'>" + pctPlain(s.totalSubsidyPct, 2) + "</span></td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "<td class='num " + deltaClass(s.deltaVsBase) + "'>" + moneyDelta(s.deltaVsBase) + "</td>" +
+            "</tr>";
+        });
+      }
+      function runReverse() {
+        var layoutVals = selectedValues(rv.layout);
+        if (!layoutVals.length) layoutVals = LAYOUTS.slice();
+        var layout = layoutVals[0];
+        var deal = asIntText(rv.deal);
+        var payment = asIntText(rv.payment);
+        var bonus = asIntText(rv.bonus);
+        var targetFinalPv = null;
+        var rawTargetFinalPv = String(rv.finalPv.value || "").trim();
+        if (rawTargetFinalPv) {
+          var parsedTargetFinalPv = num(rawTargetFinalPv);
+          if (Number.isFinite(parsedTargetFinalPv) && parsedTargetFinalPv >= 0) {
+            targetFinalPv = Math.round(parsedTargetFinalPv);
+            rv.finalPv.value = intFmt(targetFinalPv);
+          } else {
+            rv.finalPv.value = "";
+          }
+        }
+        if (!(deal > 0) || !(payment > 0)) {
+          setStatus(rv.status, "Введите цену сделки и ЕП больше 0.", false);
+          renderRows(rv.body, rv.empty, [], function () { return ""; });
+          rv.count.textContent = "0";
+          rv.minMfc.textContent = rv.maxMfc.textContent = rv.medMfc.textContent = "-";
+          return;
+        }
+
+        var programVals = selectedValues(rv.program);
+        var bankVals = selectedValues(rv.bank);
+        var termVals = selectedValues(rv.term);
+        resetRunCaches();
+        var pool = filteredRates(programVals, bankVals, termVals);
+        var poolAllBanks = filteredRates(programVals, [], termVals);
+        var poolAll = filteredRates(programVals, [], []);
+        var scenarios = buildReverseScenariosForPool(pool, deal, payment, bonus, layout);
+        if (targetFinalPv !== null) {
+          scenarios = scenarios.filter(function (s) { return s.finalPv <= targetFinalPv + 1e-9; });
+        }
+        scenarios.sort(compareScenario);
+        var sortedScenarios = sortScenarios("rvTable", scenarios, RV_EXTRACTORS);
+
+        rv.count.textContent = String(scenarios.length);
+        if (scenarios.length) {
+          var mfcs = scenarios.map(function (s) { return s.mfc; });
+          rv.minMfc.textContent = money(Math.min.apply(null, mfcs));
+          rv.maxMfc.textContent = money(Math.max.apply(null, mfcs));
+          rv.medMfc.textContent = money(median(mfcs));
+        } else {
+          rv.minMfc.textContent = rv.maxMfc.textContent = rv.medMfc.textContent = "-";
+        }
+
+        setStatus(rv.status, "Обратный расчет: планировка " + selectedSummary(rv.layout, "Все планировки") + ", тип ипотеки " + selectedSummary(rv.program, "Все типы ипотеки") + ", банк " + selectedSummary(rv.bank, "Все банки") + ", срок " + selectedSummary(rv.term, "Все сроки") + ", цена сделки " + money(deal) + ", ЕП " + money(payment) + ", бонус " + money(bonus) + (targetFinalPv !== null ? (", целевой итоговый ПВ ≤ " + money(targetFinalPv)) : "") + ". Сценариев: " + scenarios.length + ".", false);
+
+        var recoRows = [];
+        if (!scenarios.length) {
+          var poolForChange = poolAll.length ? poolAll : poolAllBanks;
+          var candidates = buildReverseScenariosForPool(poolForChange, deal, payment, bonus, layout);
+          if (targetFinalPv !== null) {
+            candidates = candidates.filter(function (s) { return s.finalPv <= targetFinalPv + 1e-9; });
+          }
+          if (candidates.length) {
+            candidates.sort(compareScenario);
+            var bestChange = candidates[0];
+            recoRows.push({
+              label: "Сменить банк/срок: лучший вариант",
+              epValue: payment,
+              pvValue: bestChange.finalPv,
+              scenario: bestChange
+            });
+          }
+          if (!candidates.length && targetFinalPv !== null) {
+            var noLimit = buildReverseScenariosForPool(poolForChange, deal, payment, bonus, layout);
+            if (noLimit.length) {
+              noLimit.sort(compareScenario);
+              var minPv = Math.min.apply(null, noLimit.map(function (s) { return s.finalPv; }));
+              recoRows.push({
+                label: "Увеличить целевой итоговый ПВ",
+                epValue: payment,
+                pvValue: minPv,
+                scenario: noLimit[0]
+              });
+            }
+          }
+          if (!candidates.length) {
+            var minPay = findMinTrueInRange(Math.max(1, payment + 1), 1500000, function (p) {
+              var list = buildReverseScenariosForPool(poolForChange, deal, p, bonus, layout);
+              return list.length > 0;
+            });
+            if (minPay) {
+              var paySc = buildReverseScenariosForPool(poolForChange, deal, minPay, bonus, layout);
+              paySc.sort(compareScenario);
+              recoRows.push({
+                label: "Увеличить ЕП",
+                epValue: minPay,
+                pvValue: paySc[0].finalPv,
+                scenario: paySc[0]
+              });
+            }
+          }
+        }
+        renderMiniRows(rv.recoBody, rv.recoEmpty, recoRows, function (r) {
+          var s = r.scenario;
+          return "<tr class='apply-row' data-apply='rv' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
+            "<td>" + r.label + "</td>" +
+            "<td class='num'><strong>" + money(r.epValue) + "</strong></td>" +
+            "<td class='num'><strong>" + money(r.pvValue) + "</strong></td>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td>" + s.rateRow.discount_term + "</td>" +
+            "<td class='num'>" + money(s.finalPv) + "</td>" +
+            "<td class='num'>" + money(s.dealPrice) + "</td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "</tr>";
+        });
+
+        renderRows(rv.body, rv.empty, sortedScenarios.slice(0, 300), function (s) {
+          return "<tr>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td>" + s.rateRow.discount_term + "</td>" +
+            "<td class='num'>" + pct(s.annualRate, 2) + "</td>" +
+            "<td class='num'>" + pct(s.commission, 2) + "</td>" +
+            "<td class='num'>" + money(s.dealPrice) + "</td>" +
+            "<td class='num'><strong>" + money(s.mfc) + "</strong></td>" +
+            "<td class='num'>" + money(s.bonusRub) + "</td>" +
+            "<td class='num'>" + pctPlain(s.bonusPctRef, 2) + "</td>" +
+            "<td class='num'>" + money(s.downPaymentDeal) + "</td>" +
+            "<td class='num'><strong>" + money(s.finalPv) + "</strong></td>" +
+            "<td class='num'>" + pctPlain(s.downPct, 2) + "</td>" +
+            "<td class='num'>" + money(s.postPayment) + "</td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "<td class='num " + deltaClass(s.deltaVsBase) + "'>" + moneyDelta(s.deltaVsBase) + "</td>" +
+            "</tr>";
+        });
+      }
+
+      function runStandard() {
+        var mfc = asIntText(st.mfc);
+        var payment = asIntText(st.payment);
+        var bonus = asIntText(st.bonus);
+        var matCapInput = asIntText(st.matCap);
+        var matCap = st.useMatCap.checked ? matCapInput : 0;
+        var pvMax = asIntText(st.pvMax);
+        var programVals = selectedValues(st.program);
+        var bankVals = selectedValues(st.bank);
+        var termVals = selectedValues(st.term);
+        resetRunCaches();
+        var pool = filteredRates(programVals, bankVals, termVals);
+        var poolByProgramBank = filteredRates(programVals, bankVals, []);
+        var bankUnspecified = isBankUnspecified(st.bank, allBanks.length);
+        var baseStUi = {
+          note: st.baseNote, bank: st.baseBank, rate: st.baseRate, pv20: st.basePv20, ep: st.baseEp, total: st.baseTotal
+        };
+        if (mfc > 0 && pool.length) {
+          var baseScenarioSt = chooseBaseScenario(pool, mfc, bankUnspecified);
+          var baseNoteSt = "ПВ 20%, базовая ставка из таблицы ставок.";
+          if (bankUnspecified) baseNoteSt += " Банк не выбран: показан самый дорогой банк.";
+          renderBaseBlock(baseStUi, baseScenarioSt, baseNoteSt);
+        } else {
+          renderBaseBlock(baseStUi, null, "ПВ 20%, базовая ставка из таблицы ставок.");
+        }
+        if (!(mfc > 0) || !(payment > 0)) {
+          setStatus(st.status, "Введите МФЦ и ЕП больше 0.", false);
+          renderRows(st.body, st.empty, [], function () { return ""; });
+          renderMiniRows(st.bestTermsBody, st.bestTermsEmpty, [], function () { return ""; });
+          renderMiniRows(st.recoDownBody, st.recoDownEmpty, [], function () { return ""; });
+          renderMiniRows(st.recoBody, st.recoEmpty, [], function () { return ""; });
+          st.count.textContent = "0";
+          st.minPv.textContent = st.minDeal.textContent = st.minCost.textContent = "-";
+          return;
+        }
+
+        var scenariosAtCurrentPayment = buildScenariosForMfcPool(pool, mfc, payment, bonus, "", matCap);
+        var scenarios = scenariosAtCurrentPayment.slice();
+        if (pvMax > 0) scenarios = scenarios.filter(function (s) { return s.finalPv <= pvMax + 1e-9; });
+        scenarios.sort(compareScenario);
+        var sortedScenarios = sortScenarios("stTable", scenarios, KC_EXTRACTORS);
+
+        st.count.textContent = String(scenarios.length);
+        if (scenarios.length) {
+          st.minPv.textContent = money(Math.min.apply(null, scenarios.map(function (s) { return s.finalPv; })));
+          st.minDeal.textContent = money(Math.min.apply(null, scenarios.map(function (s) { return s.dealPrice; })));
+          st.minCost.textContent = money(scenarios[0].selectedTotal);
+        } else {
+          st.minPv.textContent = st.minDeal.textContent = st.minCost.textContent = "-";
+        }
+
+        var statusParts = [
+          "Стандартный режим:",
+          "тип ипотеки " + selectedSummary(st.program, "Все типы ипотеки") + ",",
+          "банк " + selectedSummary(st.bank, "Все банки") + ",",
+          "срок " + selectedSummary(st.term, "Все сроки") + ",",
+          "МФЦ " + money(mfc) + ",",
+          "ЕП " + money(payment) + ",",
+          "бонус " + money(bonus) + ",",
+          "маткапитал " + (st.useMatCap.checked ? (money(matCap) + " (включен),") : "выключен,"),
+          "ограничение итогового ПВ " + money(pvMax) + ".",
+          "Сценариев: " + scenarios.length + "."
+        ];
+
+        var recoPack = buildRecommendationRowsForCalc({
+          poolCurrent: pool,
+          poolAllTerms: poolByProgramBank,
+          mfc: mfc,
+          payment: payment,
+          pvLimit: pvMax,
+          bonus: bonus,
+          layout: "",
+          matCap: matCap,
+          paymentMax: 1500000
+        });
+        var recoDownRows = recoPack.decreaseRows || [];
+        var recoRows = recoPack.increaseRows || [];
+        renderMiniRows(st.recoDownBody, st.recoDownEmpty, recoDownRows, function (r) {
+          var s = r.scenario;
+          return "<tr class='apply-row' data-apply='st' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
+            "<td>" + r.label + "</td>" +
+            "<td class='num'><strong>" + money(r.epValue) + "</strong></td>" +
+            "<td class='num'><strong>" + money(r.pvValue) + "</strong></td>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td>" + s.rateRow.discount_term + "</td>" +
+            "<td class='num'>" + money(s.finalPv) + "</td>" +
+            "<td class='num'>" + money(s.dealPrice) + "</td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "</tr>";
+        });
+        renderMiniRows(st.recoBody, st.recoEmpty, recoRows, function (r) {
+          var s = r.scenario;
+          return "<tr class='apply-row' data-apply='st' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
+            "<td>" + r.label + "</td>" +
+            "<td class='num'><strong>" + money(r.epValue) + "</strong></td>" +
+            "<td class='num'><strong>" + money(r.pvValue) + "</strong></td>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td>" + s.rateRow.discount_term + "</td>" +
+            "<td class='num'>" + money(s.finalPv) + "</td>" +
+            "<td class='num'>" + money(s.dealPrice) + "</td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "</tr>";
+        });
+
+        var bestTermRows = buildBestByTermRows(poolByProgramBank, function (r) {
+          var s = buildScenarioFromMfc(r, mfc, payment, bonus, "", matCap);
+          if (!s) return null;
+          if (pvMax > 0 && s.finalPv > pvMax + 1e-9) return null;
+          return s;
+        });
+        renderMiniRows(st.bestTermsBody, st.bestTermsEmpty, bestTermRows, function (row) {
+          var s = row.s;
+          return "<tr class='apply-row' data-apply='st' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + s.paymentDuring + "' data-pv='" + s.finalPv + "'>" +
+            "<td>" + row.termLabel + "</td>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td class='num'>" + pct(s.annualRate, 2) + "</td>" +
+            "<td class='num'>" + pct(s.commission, 2) + "</td>" +
+            "<td class='num'>" + money(s.downPaymentDeal) + "</td>" +
+            "<td class='num'><strong>" + money(s.finalPv) + "</strong></td>" +
+            "<td class='num'>" + money(s.dealPrice) + "</td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "</tr>";
+        });
+
+        if (!scenarios.length) {
+          setStatus(st.status, statusParts.join(" ") + " Нет сценариев под текущие условия. Смотрите блок «Рекомендации».", true);
+        } else {
+          setStatus(st.status, statusParts.join(" "), false);
+        }
+
+        renderRows(st.body, st.empty, sortedScenarios.slice(0, 300), function (s) {
+          return "<tr>" +
+            "<td>" + s.rateRow.bank + "</td>" +
+            "<td>" + s.rateRow.program + "</td>" +
+            "<td>" + s.rateRow.discount_term + "</td>" +
+            "<td class='num'>" + pct(s.annualRate, 2) + "</td>" +
+            "<td class='num'>" + pct(s.commission, 2) + "</td>" +
+            "<td class='num'>" + money(s.mfc) + "</td>" +
+            "<td class='num'><strong>" + money(s.dealPrice) + "</strong></td>" +
+            "<td class='num'>" + money(s.downPaymentDeal) + "</td>" +
+            "<td class='num'><strong>" + money(s.finalPv) + "</strong></td>" +
+            "<td class='num'>" + pctPlain(s.downPct, 2) + "</td>" +
+            "<td class='num'>" + money(s.paymentDuring) + "</td>" +
+            "<td class='num'>" + money(s.postPayment) + "</td>" +
+            "<td class='num'><strong>" + money(s.totalSubsidyRub) + "</strong><br><span class='muted'>" + pctPlain(s.totalSubsidyPct, 2) + "</span></td>" +
+            "<td class='num'>" + pctPlain(s.bonusPctRef, 2) + "</td>" +
+            "<td class='num'><strong>" + money(s.selectedTotal) + "</strong></td>" +
+            "<td class='num " + deltaClass(s.deltaVsBase) + "'>" + moneyDelta(s.deltaVsBase) + "</td>" +
+            "</tr>";
+        });
+      }
+
+      var kcHistory = [];
+      var kcHistoryIndex = -1;
+      var kcHistoryApplying = false;
+      var kcRunPending = false;
+      var kcRunQueued = false;
+      var kcQueuedOptions = null;
+
+      function setRunButtonLoading(button, isLoading) {
+        if (!button) return;
+        if (!button.dataset.idleLabel) button.dataset.idleLabel = button.textContent;
+        button.disabled = !!isLoading;
+        button.classList.toggle("is-loading", !!isLoading);
+        button.setAttribute("aria-busy", isLoading ? "true" : "false");
+        button.textContent = isLoading ? "Считаем..." : button.dataset.idleLabel;
+      }
+      function waitForPaint() {
+        return new Promise(function (resolve) {
+          var raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
+          raf(function () { raf(resolve); });
+        });
+      }
+      function captureKcState() {
+        return {
+          layouts: selectedValues(kc.layout).slice().sort(),
+          programs: selectedValues(kc.program).slice().sort(),
+          withRepair: isRepairEnabled(),
+          payment: Math.max(0, Math.round(num(kc.payment.value) || 0)),
+          pv: Math.max(0, Math.round(num(kc.pv.value) || 0))
+        };
+      }
+      function sameStringArrays(a, b) {
+        if (a === b) return true;
+        if (!a || !b || a.length !== b.length) return false;
+        for (var i = 0; i < a.length; i++) {
+          if (a[i] !== b[i]) return false;
+        }
+        return true;
+      }
+      function sameKcState(a, b) {
+        return !!a && !!b &&
+          a.withRepair === b.withRepair &&
+          a.payment === b.payment &&
+          a.pv === b.pv &&
+          sameStringArrays(a.layouts, b.layouts) &&
+          sameStringArrays(a.programs, b.programs);
+      }
+      function updateKcHistoryButtons() {
+        if (kc.undo) kc.undo.disabled = kcRunPending || kcHistoryIndex <= 0;
+        if (kc.redo) kc.redo.disabled = kcRunPending || kcHistoryIndex < 0 || kcHistoryIndex >= kcHistory.length - 1;
+      }
+      function pushKcHistoryState(state) {
+        if (!state) state = captureKcState();
+        if (kcHistoryIndex >= 0 && sameKcState(kcHistory[kcHistoryIndex], state)) {
+          updateKcHistoryButtons();
+          return;
+        }
+        kcHistory = kcHistory.slice(0, kcHistoryIndex + 1);
+        kcHistory.push({
+          layouts: state.layouts.slice(),
+          programs: state.programs.slice(),
+          withRepair: !!state.withRepair,
+          payment: state.payment,
+          pv: state.pv
+        });
+        if (kcHistory.length > 60) kcHistory.shift();
+        kcHistoryIndex = kcHistory.length - 1;
+        updateKcHistoryButtons();
+      }
+      function applyKcHistoryState(state) {
+        if (!state) return;
+        kcHistoryApplying = true;
+        if (kc.repair) kc.repair.checked = !!state.withRepair;
+        refreshPriceInputs();
+        setSelectValues(kc.layout, state.layouts);
+        setSelectValues(kc.program, state.programs);
+        setInputValue(kc.payment, state.payment);
+        setInputValue(kc.pv, state.pv);
+        kcHistoryApplying = false;
+        runKc({ skipHistory: true });
+      }
+      function queueOrRunKc(options) {
+        if (kcRunPending) {
+          kcRunQueued = true;
+          kcQueuedOptions = options || {};
+          return;
+        }
+        kcRunPending = true;
+        updateKcHistoryButtons();
+        setRunButtonLoading(kc.run, true);
+        setStatus(kc.status, "Идет расчет сценариев для контакт-центра...", false);
+        waitForPaint().then(function () {
+          try {
+            runKcSync();
+          } finally {
+            kcRunPending = false;
+            setRunButtonLoading(kc.run, false);
+            updateKcHistoryButtons();
+            if (kcRunQueued) {
+              var nextOptions = kcQueuedOptions || {};
+              kcRunQueued = false;
+              kcQueuedOptions = null;
+              runKc(nextOptions);
+            }
+          }
+        });
+      }
+      function runKc(options) {
+        var opts = options || {};
+        if (!opts.skipHistory && !kcHistoryApplying) pushKcHistoryState(captureKcState());
+        queueOrRunKc(opts);
+      }
+
+      setupColumnSorting("kcTable", function () { runKc({ skipHistory: true }); });
+
+      Object.keys(priceInputs).forEach(function (k) {
+        if (!priceInputs[k]) return;
+        priceInputs[k].readOnly = true;
+      });
+      refreshPriceInputs();
+      [kc.payment, kc.pv].forEach(function (el) {
+        bindMoneyInput(el);
+        asIntText(el);
+      });
+
+      var runKcDebounced = debounce(function () {
+        if (kcHistoryApplying) return;
+        runKc();
+      }, 120);
+
+      kc.run.addEventListener("click", function () { runKc(); });
+      kc.undo.addEventListener("click", function () {
+        if (kcHistoryIndex <= 0 || kcRunPending) return;
+        kcHistoryIndex -= 1;
+        updateKcHistoryButtons();
+        applyKcHistoryState(kcHistory[kcHistoryIndex]);
+      });
+      kc.redo.addEventListener("click", function () {
+        if (kcHistoryIndex >= kcHistory.length - 1 || kcRunPending) return;
+        kcHistoryIndex += 1;
+        updateKcHistoryButtons();
+        applyKcHistoryState(kcHistory[kcHistoryIndex]);
+      });
+
+      [kc.program, kc.layout].forEach(function (el) {
+        el.addEventListener("change", function () {
+          if (kcHistoryApplying) return;
+          runKcDebounced();
+        });
+      });
+      if (kc.repair) {
+        kc.repair.addEventListener("change", function () {
+          refreshPriceInputs();
+          if (kcHistoryApplying) return;
+          runKc();
+        });
+      }
+
+      document.addEventListener("click", function (ev) {
+        var row = ev.target.closest("tr.apply-row");
+        if (!row) return;
+        var scope = row.dataset.apply;
+        var program = row.dataset.program || "";
+        var ep = num(row.dataset.ep);
+        var pv = num(row.dataset.pv);
+        var allRows = row.closest("tbody").querySelectorAll("tr.apply-row");
+        for (var i = 0; i < allRows.length; i++) allRows[i].classList.remove("active");
+        row.classList.add("active");
+        if (scope === "kc") {
+          kcHistoryApplying = true;
+          if (program) setSelectValues(kc.program, [program]);
+          if (Number.isFinite(ep)) setInputValue(kc.payment, ep);
+          if (Number.isFinite(pv)) setInputValue(kc.pv, Math.ceil(pv));
+          kcHistoryApplying = false;
+          runKc();
+        }
+      });
+
+      pushKcHistoryState(captureKcState());
+      runKcSync();
+      updateKcHistoryButtons();
+    })();
+  </script>
+</body>
+</html>
+
+
