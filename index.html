@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Калькулятор Формула кц</title>
+  <title>Калькулятор Формула</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -132,7 +132,14 @@
       color:#061845;
       text-shadow:none;
     }
-    .tabs { display:none; }
+    .tabs {
+      display:flex;
+      gap:10px;
+      flex-wrap:nowrap;
+      overflow-x:auto;
+      padding-bottom:2px;
+      scrollbar-width:thin;
+    }
     .tab-btn {
       position:relative;
       width:auto;
@@ -924,7 +931,7 @@
 <body>
   <div class="page">
     <section class="hero">
-      <h1>Калькулятор Формула кц</h1>
+      <h1>Калькулятор Формула</h1>
     </section>
 
     <section class="tabs">
@@ -2286,10 +2293,11 @@
         basePv20: document.getElementById("stBasePv20"), baseEp: document.getElementById("stBaseEp"), baseTotal: document.getElementById("stBaseTotal")
       };
 
-      populateLayoutSelect(kc.layout);
-      populateSelect(kc.program, allPrograms, "Все типы ипотеки");
-      mountCustomSelect(kc.layout);
-      mountCustomSelect(kc.program);
+      [kc.layout, rv.layout].forEach(populateLayoutSelect);
+      [kc.program, rv.program, st.program].forEach(function (el) { populateSelect(el, allPrograms, "Все типы ипотеки"); });
+      [rv.bank, st.bank].forEach(function (el) { populateSelect(el, allBanks, "Все банки"); });
+      [rv.term, st.term].forEach(function (el) { populateSelect(el, allTerms, "Все сроки"); });
+      mountAllCustomSelects();
 
       function runKcSync() {
         var layouts = selectedValues(kc.layout);
@@ -2778,6 +2786,9 @@
       var kcRunPending = false;
       var kcRunQueued = false;
       var kcQueuedOptions = null;
+      var rvRunState = { pending: false, queued: false };
+      var stRunState = { pending: false, queued: false };
+      var applyRowSyncing = false;
 
       function setRunButtonLoading(button, isLoading) {
         if (!button) return;
@@ -2792,6 +2803,33 @@
           var raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
           raf(function () { raf(resolve); });
         });
+      }
+      function queueSimpleRun(state, button, statusNode, statusText, runner) {
+        if (state.pending) {
+          state.queued = true;
+          return;
+        }
+        state.pending = true;
+        setRunButtonLoading(button, true);
+        if (statusNode && statusText) setStatus(statusNode, statusText, false);
+        waitForPaint().then(function () {
+          try {
+            runner();
+          } finally {
+            state.pending = false;
+            setRunButtonLoading(button, false);
+            if (state.queued) {
+              state.queued = false;
+              queueSimpleRun(state, button, statusNode, statusText, runner);
+            }
+          }
+        });
+      }
+      function runReverseQueued() {
+        queueSimpleRun(rvRunState, rv.run, rv.status, "Идет обратный расчет сценариев...", runReverse);
+      }
+      function runStandardQueued() {
+        queueSimpleRun(stRunState, st.run, st.status, "Идет расчет стандартных сценариев...", runStandard);
       }
       function captureKcState() {
         return {
@@ -2885,23 +2923,41 @@
       }
 
       setupColumnSorting("kcTable", function () { runKc({ skipHistory: true }); });
+      setupColumnSorting("rvTable", runReverseQueued);
+      setupColumnSorting("stTable", runStandardQueued);
 
       Object.keys(priceInputs).forEach(function (k) {
         if (!priceInputs[k]) return;
         priceInputs[k].readOnly = true;
       });
       refreshPriceInputs();
-      [kc.payment, kc.pv].forEach(function (el) {
+      [kc.payment, kc.pv, rv.deal, rv.payment, rv.bonus, st.mfc, st.payment, st.bonus, st.matCap, st.pvMax].forEach(function (el) {
         bindMoneyInput(el);
         asIntText(el);
+      });
+      rv.finalPv.addEventListener("blur", function () {
+        var txt = String(rv.finalPv.value || "").trim();
+        if (!txt) { rv.finalPv.value = ""; return; }
+        var n = num(txt);
+        rv.finalPv.value = Number.isFinite(n) && n >= 0 ? intFmt(Math.round(n)) : "";
       });
 
       var runKcDebounced = debounce(function () {
         if (kcHistoryApplying) return;
         runKc();
       }, 120);
+      var runReverseDebounced = debounce(function () {
+        if (applyRowSyncing) return;
+        runReverseQueued();
+      }, 120);
+      var runStandardDebounced = debounce(function () {
+        if (applyRowSyncing) return;
+        runStandardQueued();
+      }, 120);
 
       kc.run.addEventListener("click", function () { runKc(); });
+      rv.run.addEventListener("click", runReverseQueued);
+      st.run.addEventListener("click", runStandardQueued);
       kc.undo.addEventListener("click", function () {
         if (kcHistoryIndex <= 0 || kcRunPending) return;
         kcHistoryIndex -= 1;
@@ -2921,6 +2977,18 @@
           runKcDebounced();
         });
       });
+      [rv.program, rv.bank, rv.term, rv.layout].forEach(function (el) {
+        el.addEventListener("change", function () {
+          if (applyRowSyncing) return;
+          runReverseDebounced();
+        });
+      });
+      [st.program, st.bank, st.term].forEach(function (el) {
+        el.addEventListener("change", function () {
+          if (applyRowSyncing) return;
+          runStandardDebounced();
+        });
+      });
       if (kc.repair) {
         kc.repair.addEventListener("change", function () {
           refreshPriceInputs();
@@ -2928,12 +2996,18 @@
           runKc();
         });
       }
+      st.useMatCap.addEventListener("change", function () {
+        if (applyRowSyncing) return;
+        runStandardDebounced();
+      });
 
       document.addEventListener("click", function (ev) {
         var row = ev.target.closest("tr.apply-row");
         if (!row) return;
         var scope = row.dataset.apply;
+        var bank = row.dataset.bank || "";
         var program = row.dataset.program || "";
+        var term = row.dataset.term || "";
         var ep = num(row.dataset.ep);
         var pv = num(row.dataset.pv);
         var allRows = row.closest("tbody").querySelectorAll("tr.apply-row");
@@ -2946,11 +3020,42 @@
           if (Number.isFinite(pv)) setInputValue(kc.pv, Math.ceil(pv));
           kcHistoryApplying = false;
           runKc();
+        } else if (scope === "st") {
+          applyRowSyncing = true;
+          if (bank) setSelectValues(st.bank, [bank]);
+          if (program) setSelectValues(st.program, [program]);
+          if (term) setSelectValues(st.term, [term]);
+          if (Number.isFinite(ep)) setInputValue(st.payment, ep);
+          if (Number.isFinite(pv)) setInputValue(st.pvMax, Math.ceil(pv));
+          applyRowSyncing = false;
+          runStandardQueued();
+        } else if (scope === "rv") {
+          applyRowSyncing = true;
+          if (bank) setSelectValues(rv.bank, [bank]);
+          if (program) setSelectValues(rv.program, [program]);
+          if (term) setSelectValues(rv.term, [term]);
+          if (Number.isFinite(ep)) setInputValue(rv.payment, ep);
+          if (Number.isFinite(pv)) rv.finalPv.value = intFmt(Math.ceil(pv));
+          applyRowSyncing = false;
+          runReverseQueued();
         }
+      });
+
+      var tabs = Array.from(document.querySelectorAll(".tab-btn"));
+      tabs.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var tab = btn.getAttribute("data-tab");
+          tabs.forEach(function (b) { b.classList.toggle("active", b === btn); });
+          ["kc", "reverse", "standard"].forEach(function (name) {
+            document.getElementById("panel-" + name).classList.toggle("active", name === tab);
+          });
+        });
       });
 
       pushKcHistoryState(captureKcState());
       runKcSync();
+      runReverse();
+      runStandard();
       updateKcHistoryButtons();
     })();
   </script>
