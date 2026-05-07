@@ -1093,6 +1093,7 @@
         <div class="row"><label for="stBonus">Бонус, ₽</label><input id="stBonus" type="text" value="0" /></div>
         <div class="row"><label for="stMatCap">Маткапитал, ₽</label><input id="stMatCap" type="text" value="737000" /></div>
         <div class="row"><label>&nbsp;</label><label class="check-pill" for="stUseMatCap"><input id="stUseMatCap" type="checkbox" /><span>Применять маткапитал</span></label></div>
+        <div class="row"><label>&nbsp;</label><label class="check-pill" for="stUseBaseRateOnly"><input id="stUseBaseRateOnly" type="checkbox" /><span>Без субсидирования ставки (по базовой)</span></label></div>
         <div class="row"><label for="stPvMax">Макс. итоговый ПВ, ₽</label><input id="stPvMax" type="text" value="9000000" /></div>
         <div class="row"><label>&nbsp;</label><button id="stRun" class="btn-primary" type="button">Рассчитать</button></div>
       </div>
@@ -1329,19 +1330,20 @@
         termPoolCache.set(pool, grouped);
         return grouped;
       }
-      function getPaymentScenarioState(rateRow, targetPayment) {
+      function getPaymentScenarioState(rateRow, targetPayment, useBaseRateOnly) {
         var payment = Math.max(0, Math.round(Number(targetPayment) || 0));
         if (!(payment > 0)) return null;
         if (!paymentScenarioCache) paymentScenarioCache = new Map();
-        var key = rateRow._id + "|" + payment;
+        var annualRate = useBaseRateOnly ? rateRow._baseRate : rateRow._annualRate;
+        var key = rateRow._id + "|" + payment + "|" + (useBaseRateOnly ? "1" : "0");
         if (paymentScenarioCache.has(key)) return paymentScenarioCache.get(key);
 
-        var loanBody = annuityLoanFromPayment(payment, rateRow._annualRate, YEARS);
+        var loanBody = annuityLoanFromPayment(payment, annualRate, YEARS);
         var cached = null;
         if (Number.isFinite(loanBody) && loanBody > 0) {
           var subsidyMonths = rateRow._termMonths;
           var remainingMonths = Math.max(0, TOTAL_MONTHS - subsidyMonths);
-          var remainingBody = remainingBalanceAfterMonths(loanBody, rateRow._annualRate, payment, subsidyMonths);
+          var remainingBody = remainingBalanceAfterMonths(loanBody, annualRate, payment, subsidyMonths);
           cached = {
             loanBody: loanBody,
             paymentDuring: payment,
@@ -1482,14 +1484,14 @@
         ui.total.textContent = money(baseScenario.baseTotal);
       }
 
-      function buildScenarioFromMfc(rateRow, mfc, targetPayment, bonusRub, layout, matCapRub) {
-        var annualRate = rateRow._annualRate;
+      function buildScenarioFromMfc(rateRow, mfc, targetPayment, bonusRub, layout, matCapRub, useBaseRateOnly) {
         var baseRate = rateRow._baseRate;
-        var commission = rateRow._commission;
+        var annualRate = useBaseRateOnly ? baseRate : rateRow._annualRate;
+        var commission = useBaseRateOnly ? 0 : rateRow._commission;
         if (!Number.isFinite(annualRate) || annualRate <= 0 || !Number.isFinite(commission) || commission < 0) return null;
         var matCap = Number.isFinite(matCapRub) && matCapRub > 0 ? matCapRub : 0;
 
-        var paymentState = getPaymentScenarioState(rateRow, targetPayment);
+        var paymentState = getPaymentScenarioState(rateRow, targetPayment, useBaseRateOnly);
         if (!paymentState) return null;
         var loanBody = paymentState.loanBody;
         if (!rowLoanLimitsOk(rateRow, loanBody)) return null;
@@ -1527,6 +1529,7 @@
 
         return {
           layout: layout, rateRow: rateRow, annualRate: annualRate, baseRate: baseRate, commission: commission,
+          useBaseRateOnly: !!useBaseRateOnly,
           mfc: mfc, bonusRub: bonusRub, bonusPctRef: bonusPctRef, dealPrice: dealPrice, downPaymentDeal: downPaymentDeal,
           finalPv: finalPv, matCapUsed: matCapUsed, matCapInput: matCap, downPct: downPct, loanBody: loanBody, paymentDuring: paymentDuring, postPayment: postPayment,
           subsidyMonths: subsidyMonths, remainingMonths: remainingMonths, totalSubsidyRub: totalSubsidyRub,
@@ -1709,21 +1712,22 @@
         function (s) { return s.deltaVsBase; }
       ];
 
-      function scenarioListCacheKey(pool, mfc, payment, bonus, layout, matCap) {
+      function scenarioListCacheKey(pool, mfc, payment, bonus, layout, matCap, useBaseRateOnly) {
         return getPoolId(pool) + "|" +
           Math.round(Number(mfc) || 0) + "|" +
           Math.round(Number(payment) || 0) + "|" +
           Math.round(Number(bonus) || 0) + "|" +
           String(layout || "") + "|" +
-          Math.round(Number(matCap) || 0);
+          Math.round(Number(matCap) || 0) + "|" +
+          (useBaseRateOnly ? "1" : "0");
       }
-      function buildScenariosForMfcPool(pool, mfc, payment, bonus, layout, matCap) {
+      function buildScenariosForMfcPool(pool, mfc, payment, bonus, layout, matCap, useBaseRateOnly) {
         if (!pool || !pool.length) return [];
-        var key = runScenarioListCache ? scenarioListCacheKey(pool, mfc, payment, bonus, layout, matCap) : "";
+        var key = runScenarioListCache ? scenarioListCacheKey(pool, mfc, payment, bonus, layout, matCap, useBaseRateOnly) : "";
         if (runScenarioListCache && runScenarioListCache.has(key)) return runScenarioListCache.get(key);
         var out = [];
         for (var i = 0; i < pool.length; i++) {
-          var scenario = buildScenarioFromMfc(pool[i], mfc, payment, bonus, layout, matCap);
+          var scenario = buildScenarioFromMfc(pool[i], mfc, payment, bonus, layout, matCap, useBaseRateOnly);
           if (scenario) out.push(scenario);
         }
         if (runScenarioListCache) runScenarioListCache.set(key, out);
@@ -1829,55 +1833,57 @@
           return Number(key);
         }).sort(function (a, b) { return a - b; });
       }
-      function scenariosForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap) {
+      function scenariosForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap, useBaseRateOnly) {
         var grouped = groupPoolByTermMonths(poolAllTerms);
         var poolTerm = grouped[String(termMonths)] || [];
-        return buildScenariosForMfcPool(poolTerm, mfc, payment, bonus, layout, matCap);
+        return buildScenariosForMfcPool(poolTerm, mfc, payment, bonus, layout, matCap, useBaseRateOnly);
       }
-      function bestScenarioForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap, pvCap) {
-        return pickBestByPv(scenariosForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap), pvCap);
+      function bestScenarioForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap, pvCap, useBaseRateOnly) {
+        return pickBestByPv(scenariosForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap, useBaseRateOnly), pvCap);
       }
-      function minPvForTermAtPayment(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap) {
-        var sc = scenariosForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap);
+      function minPvForTermAtPayment(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap, useBaseRateOnly) {
+        var sc = scenariosForExactTerm(poolAllTerms, termMonths, mfc, payment, bonus, layout, matCap, useBaseRateOnly);
         var best = pickBestByPv(sc);
         if (!best) return null;
         return { pv: Math.round(best.finalPv), scenario: best };
       }
-      function maxAllowedLoanForScenario(rateRow, dealBase) {
+      function maxAllowedLoanForScenario(rateRow, dealBase, useBaseRateOnly) {
         var maxLoan = Number.isFinite(rateRow._loanMax) ? rateRow._loanMax : Infinity;
         if (rateRow._familyOrIt) maxLoan = Math.min(maxLoan, FAMILY_IT_CAP);
         var minPv = rateRow._minPv;
+        var commission = useBaseRateOnly ? 0 : rateRow._commission;
         if (Number.isFinite(minPv) && minPv > 0) {
           var share = minPv / 100;
-          var denom = 1 - rateRow._commission * (1 - share);
+          var denom = 1 - commission * (1 - share);
           if (!(denom > 1e-12)) return 0;
           maxLoan = Math.min(maxLoan, (dealBase * (1 - share)) / denom);
         }
         return maxLoan;
       }
-      function candidateMinPaymentForRow(rateRow, mfc, pvCap, bonus, matCap) {
+      function candidateMinPaymentForRow(rateRow, mfc, pvCap, bonus, matCap, useBaseRateOnly) {
         var lowerLoan = Number.isFinite(rateRow._loanMin) ? rateRow._loanMin : 0;
+        var commission = useBaseRateOnly ? 0 : rateRow._commission;
         if (pvCap > 0) {
-          var coeff = 1 - rateRow._commission;
+          var coeff = 1 - commission;
           if (coeff <= 1e-12) {
             if (mfc - matCap > pvCap + 1e-9) return null;
           } else {
             lowerLoan = Math.max(lowerLoan, Math.max(0, (mfc - matCap - pvCap) / coeff));
           }
         }
-        var upperLoan = maxAllowedLoanForScenario(rateRow, mfc + bonus);
+        var upperLoan = maxAllowedLoanForScenario(rateRow, mfc + bonus, useBaseRateOnly);
         if (!(upperLoan >= lowerLoan - 1e-9)) return null;
-        return Math.max(1, Math.ceil(annuityPaymentFromLoan(Math.max(0, lowerLoan), rateRow._annualRate, TOTAL_MONTHS)));
+        return Math.max(1, Math.ceil(annuityPaymentFromLoan(Math.max(0, lowerLoan), useBaseRateOnly ? rateRow._baseRate : rateRow._annualRate, TOTAL_MONTHS)));
       }
-      function minPaymentForPoolAtPv(pool, mfc, startPayment, maxPayment, pvCap, bonus, layout, matCap) {
+      function minPaymentForPoolAtPv(pool, mfc, startPayment, maxPayment, pvCap, bonus, layout, matCap, useBaseRateOnly) {
         var start = Math.max(1, Math.round(startPayment));
         var limit = Math.max(start, Math.round(maxPayment));
         var bestPay = null;
         var bestScenario = null;
         for (var i = 0; i < pool.length; i++) {
-          var candidate = candidateMinPaymentForRow(pool[i], mfc, pvCap, bonus, matCap);
+          var candidate = candidateMinPaymentForRow(pool[i], mfc, pvCap, bonus, matCap, useBaseRateOnly);
           if (!Number.isFinite(candidate) || candidate < start || candidate > limit) continue;
-          var candidateScenario = buildScenarioFromMfc(pool[i], mfc, candidate, bonus, layout, matCap);
+          var candidateScenario = buildScenarioFromMfc(pool[i], mfc, candidate, bonus, layout, matCap, useBaseRateOnly);
           if (!candidateScenario) continue;
           if (pvCap > 0 && candidateScenario.finalPv > pvCap + 1e-9) continue;
           if (bestPay === null || candidate < bestPay || (candidate === bestPay && compareByPvThenTotal(candidateScenario, bestScenario) < 0)) {
@@ -1886,21 +1892,21 @@
           }
         }
         if (bestPay === null) return null;
-        var scenarioAtBestPayment = pickBestByPv(buildScenariosForMfcPool(pool, mfc, bestPay, bonus, layout, matCap), pvCap) || bestScenario;
+        var scenarioAtBestPayment = pickBestByPv(buildScenariosForMfcPool(pool, mfc, bestPay, bonus, layout, matCap, useBaseRateOnly), pvCap) || bestScenario;
         return scenarioAtBestPayment ? { payment: bestPay, scenario: scenarioAtBestPayment } : null;
       }
-      function minPaymentForTermAtPv(poolAllTerms, termMonths, mfc, startPayment, maxPayment, pvCap, bonus, layout, matCap) {
+      function minPaymentForTermAtPv(poolAllTerms, termMonths, mfc, startPayment, maxPayment, pvCap, bonus, layout, matCap, useBaseRateOnly) {
         var grouped = groupPoolByTermMonths(poolAllTerms);
         var poolTerm = grouped[String(termMonths)] || [];
-        return minPaymentForPoolAtPv(poolTerm, mfc, startPayment, maxPayment, pvCap, bonus, layout, matCap);
+        return minPaymentForPoolAtPv(poolTerm, mfc, startPayment, maxPayment, pvCap, bonus, layout, matCap, useBaseRateOnly);
       }
-      function combinedEpPvForTerm(poolAllTerms, termMonths, mfc, currentPayment, currentPv, targetPayment, targetPv, bonus, layout, matCap) {
+      function combinedEpPvForTerm(poolAllTerms, termMonths, mfc, currentPayment, currentPv, targetPayment, targetPv, bonus, layout, matCap, useBaseRateOnly) {
         var alphas = [0.5, 0.6, 0.7, 0.8, 0.9, 1];
         for (var i = 0; i < alphas.length; i++) {
           var a = alphas[i];
           var pmt = Math.round(currentPayment + (targetPayment - currentPayment) * a);
           var pv = Math.round(currentPv + (targetPv - currentPv) * a);
-          var sc = bestScenarioForExactTerm(poolAllTerms, termMonths, mfc, pmt, bonus, layout, matCap, pv);
+          var sc = bestScenarioForExactTerm(poolAllTerms, termMonths, mfc, pmt, bonus, layout, matCap, pv, useBaseRateOnly);
           if (sc) return { payment: pmt, pv: pv, scenario: sc };
         }
         return null;
@@ -1925,6 +1931,7 @@
         var bonus = opts.bonus;
         var layout = opts.layout;
         var matCap = opts.matCap;
+        var useBaseRateOnly = !!opts.useBaseRateOnly;
         var paymentMax = opts.paymentMax || 1500000;
         var currentPv = Math.max(0, Math.round(pvLimit || 0));
         var rows = [];
@@ -1932,10 +1939,34 @@
         var epDownValue = null;
 
         function bestOnCurrentPool(testPayment, testPv) {
-          return pickBestByPv(buildScenariosForMfcPool(poolCurrent, mfc, testPayment, bonus, layout, matCap), testPv);
+          return pickBestByPv(buildScenariosForMfcPool(poolCurrent, mfc, testPayment, bonus, layout, matCap, useBaseRateOnly), testPv);
+        }
+        function findClosestFeasiblePaymentDown(maxPayment, testFn) {
+          var top = Math.max(1, Math.round(maxPayment || 1));
+          var found = null;
+          for (var p = top; p >= 1; p -= 1000) {
+            if (testFn(p)) { found = p; break; }
+          }
+          if (found === null && testFn(1)) found = 1;
+          if (found === null) return null;
+
+          var best = found;
+          var hi100 = Math.min(top, found + 999);
+          for (var p2 = hi100; p2 >= found; p2 -= 100) {
+            if (testFn(p2)) { best = p2; break; }
+          }
+          var hi10 = Math.min(top, best + 99);
+          for (var p3 = hi10; p3 >= best; p3 -= 10) {
+            if (testFn(p3)) { best = p3; break; }
+          }
+          var hi1 = Math.min(top, best + 9);
+          for (var p4 = hi1; p4 >= best; p4 -= 1) {
+            if (testFn(p4)) { best = p4; break; }
+          }
+          return best;
         }
 
-        var currentScenariosNoPv = buildScenariosForMfcPool(poolCurrent, mfc, payment, bonus, layout, matCap);
+        var currentScenariosNoPv = buildScenariosForMfcPool(poolCurrent, mfc, payment, bonus, layout, matCap, useBaseRateOnly);
         var bestCurrentNoPv = pickBestByPv(currentScenariosNoPv);
         var bestCurrentWithPv = bestOnCurrentPool(payment, currentPv);
 
@@ -1956,7 +1987,7 @@
             }
           }
           if (payment > 1) {
-            var epDown = minPaymentForPoolAtPv(poolCurrent, mfc, 1, payment, currentPv, bonus, layout, matCap);
+            var epDown = minPaymentForPoolAtPv(poolCurrent, mfc, 1, payment, currentPv, bonus, layout, matCap, useBaseRateOnly);
             if (epDown && epDown.payment + 1e-9 < payment) {
               if (epDown.scenario) {
                 epDownValue = epDown.payment;
@@ -1965,7 +1996,7 @@
                   kind: "decrease",
                   decreaseMode: "single-ep",
                   epValue: epDown.payment,
-                  pvValue: currentPv,
+                  pvValue: useBaseRateOnly ? Math.ceil(epDown.scenario.finalPv) : currentPv,
                   scenario: epDown.scenario
                 });
               }
@@ -2001,9 +2032,25 @@
               });
             }
           }
+        } else if (useBaseRateOnly && payment > 1) {
+          var hasAtPaymentFallback = function (p) { return !!bestOnCurrentPool(p, currentPv); };
+          var epDownFallback = findClosestFeasiblePaymentDown(payment, hasAtPaymentFallback);
+          if (Number.isFinite(epDownFallback) && epDownFallback + 1e-9 < payment) {
+            var sEpDownFallback = bestOnCurrentPool(epDownFallback, currentPv);
+            if (sEpDownFallback) {
+              rows.push({
+                label: "Рекомендация по уменьшению ЕП",
+                kind: "decrease",
+                decreaseMode: "single-ep",
+                epValue: epDownFallback,
+                pvValue: Math.ceil(sEpDownFallback.finalPv),
+                scenario: sEpDownFallback
+              });
+            }
+          }
         }
 
-        var allCurrentPaymentScenarios = buildScenariosForMfcPool(poolAllTerms, mfc, payment, bonus, layout, matCap);
+        var allCurrentPaymentScenarios = buildScenariosForMfcPool(poolAllTerms, mfc, payment, bonus, layout, matCap, useBaseRateOnly);
         var eligibleCurrentPayment = allCurrentPaymentScenarios.filter(function (s) {
           return currentPv > 0 ? s.finalPv <= currentPv + 1e-9 : true;
         });
@@ -2027,28 +2074,28 @@
             ? "Рекомендация по увеличению ЕП для увеличения срока"
             : "Рекомендация по увеличению ЕП для увеличения еще чуть большего срока";
 
-          var pvUp = minPvForTermAtPayment(poolAllTerms, term, mfc, payment, bonus, layout, matCap);
+          var pvUp = minPvForTermAtPayment(poolAllTerms, term, mfc, payment, bonus, layout, matCap, useBaseRateOnly);
           if (pvUp && pvUp.pv > currentPv + 1e-9) {
-            var sPvUp = bestScenarioForExactTerm(poolAllTerms, term, mfc, payment, bonus, layout, matCap, pvUp.pv) || pvUp.scenario;
+            var sPvUp = bestScenarioForExactTerm(poolAllTerms, term, mfc, payment, bonus, layout, matCap, pvUp.pv, useBaseRateOnly) || pvUp.scenario;
             if (sPvUp) {
               pvRowsByTarget[i] = {
                 label: pvLabel,
                 kind: "increase",
                 epValue: payment,
-                pvValue: pvUp.pv,
+                pvValue: useBaseRateOnly ? Math.ceil(sPvUp.finalPv) : pvUp.pv,
                 scenario: sPvUp
               };
               pvIncByTarget[i] = { value: pvUp.pv, term: term };
             }
           }
 
-          var epUp = minPaymentForTermAtPv(poolAllTerms, term, mfc, Math.max(1, payment + 1), paymentMax, currentPv, bonus, layout, matCap);
+          var epUp = minPaymentForTermAtPv(poolAllTerms, term, mfc, Math.max(1, payment + 1), paymentMax, currentPv, bonus, layout, matCap, useBaseRateOnly);
           if (epUp && epUp.payment > payment + 1e-9) {
             epRowsByTarget[i] = {
               label: epLabel,
               kind: "increase",
               epValue: epUp.payment,
-              pvValue: currentPv,
+              pvValue: useBaseRateOnly ? Math.ceil(epUp.scenario.finalPv) : currentPv,
               scenario: epUp.scenario
             };
             epIncByTarget[i] = { value: epUp.payment, term: term };
@@ -2075,7 +2122,8 @@
             pvIncByTarget[j].value,
             bonus,
             layout,
-            matCap
+            matCap,
+            useBaseRateOnly
           );
           if (!combo) continue;
           rows.push({
@@ -2332,7 +2380,7 @@
       var st = {
         program: document.getElementById("stProgram"), bank: document.getElementById("stBank"), term: document.getElementById("stTerm"),
         mfc: document.getElementById("stMfc"), payment: document.getElementById("stPayment"), bonus: document.getElementById("stBonus"),
-        matCap: document.getElementById("stMatCap"), useMatCap: document.getElementById("stUseMatCap"), pvMax: document.getElementById("stPvMax"), run: document.getElementById("stRun"),
+        matCap: document.getElementById("stMatCap"), useMatCap: document.getElementById("stUseMatCap"), useBaseRateOnly: document.getElementById("stUseBaseRateOnly"), pvMax: document.getElementById("stPvMax"), run: document.getElementById("stRun"),
         body: document.getElementById("stBody"), empty: document.getElementById("stEmpty"), status: document.getElementById("stStatus"),
         count: document.getElementById("stCount"), minPv: document.getElementById("stMinPv"), minDeal: document.getElementById("stMinDeal"), minCost: document.getElementById("stMinCost"),
         bestTermsBody: document.getElementById("stBestTermsBody"), bestTermsEmpty: document.getElementById("stBestTermsEmpty"),
@@ -2680,6 +2728,7 @@
         var bonus = asIntText(st.bonus);
         var matCapInput = asIntText(st.matCap);
         var matCap = st.useMatCap.checked ? matCapInput : 0;
+        var useBaseRateOnly = !!(st.useBaseRateOnly && st.useBaseRateOnly.checked);
         var pvMax = asIntText(st.pvMax);
         var programVals = selectedValues(st.program);
         var bankVals = selectedValues(st.bank);
@@ -2694,6 +2743,7 @@
         if (mfc > 0 && pool.length) {
           var baseScenarioSt = chooseBaseScenario(pool, mfc, bankUnspecified);
           var baseNoteSt = "ПВ 20%, базовая ставка из таблицы ставок.";
+          if (useBaseRateOnly) baseNoteSt += " Включен расчет без субсидирования ставки.";
           if (bankUnspecified) baseNoteSt += " Банк не выбран: показан самый дорогой банк.";
           renderBaseBlock(baseStUi, baseScenarioSt, baseNoteSt);
         } else {
@@ -2710,7 +2760,7 @@
           return;
         }
 
-        var scenariosAtCurrentPayment = buildScenariosForMfcPool(pool, mfc, payment, bonus, "", matCap);
+        var scenariosAtCurrentPayment = buildScenariosForMfcPool(pool, mfc, payment, bonus, "", matCap, useBaseRateOnly);
         var scenarios = scenariosAtCurrentPayment.slice();
         if (pvMax > 0) scenarios = scenarios.filter(function (s) { return s.finalPv <= pvMax + 1e-9; });
         scenarios.sort(compareScenario);
@@ -2734,6 +2784,7 @@
           "ЕП " + money(payment) + ",",
           "бонус " + money(bonus) + ",",
           "маткапитал " + (st.useMatCap.checked ? (money(matCap) + " (включен),") : "выключен,"),
+          "ставка " + (useBaseRateOnly ? "без субсидирования (базовая)," : "с субсидированием (клиентская),"),
           "ограничение итогового ПВ " + money(pvMax) + ".",
           "Сценариев: " + scenarios.length + "."
         ];
@@ -2747,13 +2798,14 @@
           bonus: bonus,
           layout: "",
           matCap: matCap,
+          useBaseRateOnly: useBaseRateOnly,
           paymentMax: 1500000
         });
         var recoDownRows = recoPack.decreaseRows || [];
         var recoRows = recoPack.increaseRows || [];
         renderMiniRows(st.recoDownBody, st.recoDownEmpty, recoDownRows, function (r) {
           var s = r.scenario;
-          return "<tr class='apply-row' data-apply='st' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
+          return "<tr class='apply-row' data-apply='st' data-base-only='" + (s.useBaseRateOnly ? "1" : "0") + "' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
             "<td>" + r.label + "</td>" +
             "<td class='num'><strong>" + money(r.epValue) + "</strong></td>" +
             "<td class='num'><strong>" + money(r.pvValue) + "</strong></td>" +
@@ -2767,7 +2819,7 @@
         });
         renderMiniRows(st.recoBody, st.recoEmpty, recoRows, function (r) {
           var s = r.scenario;
-          return "<tr class='apply-row' data-apply='st' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
+          return "<tr class='apply-row' data-apply='st' data-base-only='" + (s.useBaseRateOnly ? "1" : "0") + "' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
             "<td>" + r.label + "</td>" +
             "<td class='num'><strong>" + money(r.epValue) + "</strong></td>" +
             "<td class='num'><strong>" + money(r.pvValue) + "</strong></td>" +
@@ -2781,14 +2833,14 @@
         });
 
         var bestTermRows = buildBestByTermRows(poolByProgramBank, function (r) {
-          var s = buildScenarioFromMfc(r, mfc, payment, bonus, "", matCap);
+          var s = buildScenarioFromMfc(r, mfc, payment, bonus, "", matCap, useBaseRateOnly);
           if (!s) return null;
           if (pvMax > 0 && s.finalPv > pvMax + 1e-9) return null;
           return s;
         });
         renderMiniRows(st.bestTermsBody, st.bestTermsEmpty, bestTermRows, function (row) {
           var s = row.s;
-          return "<tr class='apply-row' data-apply='st' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + s.paymentDuring + "' data-pv='" + s.finalPv + "'>" +
+          return "<tr class='apply-row' data-apply='st' data-base-only='" + (s.useBaseRateOnly ? "1" : "0") + "' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + s.paymentDuring + "' data-pv='" + s.finalPv + "'>" +
             "<td>" + row.termLabel + "</td>" +
             "<td>" + s.rateRow.bank + "</td>" +
             "<td>" + s.rateRow.program + "</td>" +
@@ -3049,6 +3101,12 @@
         if (applyRowSyncing) return;
         runStandardDebounced();
       });
+      if (st.useBaseRateOnly) {
+        st.useBaseRateOnly.addEventListener("change", function () {
+          if (applyRowSyncing) return;
+          runStandardDebounced();
+        });
+      }
 
       document.addEventListener("click", function (ev) {
         var row = ev.target.closest("tr.apply-row");
@@ -3071,11 +3129,13 @@
           runKc();
         } else if (scope === "st") {
           applyRowSyncing = true;
+          var baseOnly = row.dataset.baseOnly === "1";
           if (bank) setSelectValues(st.bank, [bank]);
           if (program) setSelectValues(st.program, [program]);
           if (term) setSelectValues(st.term, [term]);
           if (Number.isFinite(ep)) setInputValue(st.payment, ep);
           if (Number.isFinite(pv)) setInputValue(st.pvMax, Math.ceil(pv));
+          if (st.useBaseRateOnly && row.dataset.baseOnly) st.useBaseRateOnly.checked = baseOnly;
           applyRowSyncing = false;
           runStandardQueued();
         } else if (scope === "rv") {
