@@ -1168,7 +1168,7 @@
     </section>
   </div>
 
-  <script src="./mortgage_calculator_data.js?v=20260401_1"></script>
+  <script src="./mortgage_calculator_data.js?v=20260522_1"></script>
   <script>
     (function () {
       var data = window.MORTGAGE_CALC_DATA;
@@ -1916,7 +1916,7 @@
         return rows.filter(function (r) {
           if (!r || !r.scenario) return false;
           if (Math.abs(r.epValue - currentPayment) < 1 && Math.abs(r.pvValue - currentPv) < 1) return false;
-          var key = r.label + "|" + Math.round(r.epValue) + "|" + Math.round(r.pvValue);
+          var key = String(r.kind || "") + "|" + Math.round(r.epValue) + "|" + Math.round(r.pvValue);
           if (map[key]) return false;
           map[key] = true;
           return true;
@@ -1932,6 +1932,7 @@
         var layout = opts.layout;
         var matCap = opts.matCap;
         var useBaseRateOnly = !!opts.useBaseRateOnly;
+        var allowLooseDecreaseFallback = !!opts.allowLooseDecreaseFallback;
         var paymentMax = opts.paymentMax || 1500000;
         var currentPv = Math.max(0, Math.round(pvLimit || 0));
         var rows = [];
@@ -2032,7 +2033,7 @@
               });
             }
           }
-        } else if (useBaseRateOnly && payment > 1) {
+        } else if ((useBaseRateOnly || allowLooseDecreaseFallback) && payment > 1) {
           var hasAtPaymentFallback = function (p) { return !!bestOnCurrentPool(p, currentPv); };
           var epDownFallback = findClosestFeasiblePaymentDown(payment, hasAtPaymentFallback);
           if (Number.isFinite(epDownFallback) && epDownFallback + 1e-9 < payment) {
@@ -2153,6 +2154,27 @@
           increaseRows: normalized.filter(function (r) { return r.kind !== "decrease"; }).slice(0, 8)
         };
       }
+      function standardRecoLabel(row) {
+        if (!row) return "";
+        if (row.kind !== "decrease") return row.label;
+        if (row.decreaseMode === "single-pv") return "Уменьшение ПВ";
+        if (row.decreaseMode === "single-ep") return "Уменьшение ЕП";
+        if (row.decreaseMode === "combo") {
+          var match = String(row.label || "").match(/\(вариант\s+(\d+)\)/i);
+          var suffix = match ? " (вариант " + match[1] + ")" : "";
+          return "Уменьшение ЕП и уменьшение ПВ" + suffix;
+        }
+        return row.label;
+      }
+      function adaptStandardRecoRows(rows) {
+        return (rows || []).map(function (row) {
+          if (!row || !row.scenario) return row;
+          return Object.assign({}, row, {
+            label: standardRecoLabel(row),
+            pvValue: Math.ceil(row.scenario.finalPv)
+          });
+        });
+      }
 
       var rateIdSeq = 0;
       var rates = data.rates.map(function (r) {
@@ -2178,7 +2200,7 @@
       var allTerms = uniq(rates.map(function (r) { return r.discount_term; })).sort(function (a, b) { return termSort(a) - termSort(b); });
       var ratesSourceEl = document.getElementById("ratesSource");
       if (ratesSourceEl) {
-        ratesSourceEl.textContent = (data.sources && data.sources.rates_file) ? data.sources.rates_file : "Ставки NEW.xlsx";
+        ratesSourceEl.textContent = (data.sources && data.sources.rates_file) ? data.sources.rates_file : "Ставки 3.xlsx";
       }
 
       function populateSelect(selectEl, values, allLabel) {
@@ -2799,13 +2821,14 @@
           layout: "",
           matCap: matCap,
           useBaseRateOnly: useBaseRateOnly,
+          allowLooseDecreaseFallback: true,
           paymentMax: 1500000
         });
-        var recoDownRows = recoPack.decreaseRows || [];
-        var recoRows = recoPack.increaseRows || [];
+        var recoDownRows = adaptStandardRecoRows(recoPack.decreaseRows || []);
+        var recoRows = adaptStandardRecoRows(recoPack.increaseRows || []);
         renderMiniRows(st.recoDownBody, st.recoDownEmpty, recoDownRows, function (r) {
           var s = r.scenario;
-          return "<tr class='apply-row' data-apply='st' data-base-only='" + (s.useBaseRateOnly ? "1" : "0") + "' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
+          return "<tr class='apply-row' data-apply='st' data-base-only='" + (s.useBaseRateOnly ? "1" : "0") + "' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "' data-pv-apply='" + s.finalPv + "'>" +
             "<td>" + r.label + "</td>" +
             "<td class='num'><strong>" + money(r.epValue) + "</strong></td>" +
             "<td class='num'><strong>" + money(r.pvValue) + "</strong></td>" +
@@ -2819,7 +2842,7 @@
         });
         renderMiniRows(st.recoBody, st.recoEmpty, recoRows, function (r) {
           var s = r.scenario;
-          return "<tr class='apply-row' data-apply='st' data-base-only='" + (s.useBaseRateOnly ? "1" : "0") + "' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "'>" +
+          return "<tr class='apply-row' data-apply='st' data-base-only='" + (s.useBaseRateOnly ? "1" : "0") + "' data-bank='" + s.rateRow.bank + "' data-program='" + s.rateRow.program + "' data-term='" + s.rateRow.discount_term + "' data-ep='" + r.epValue + "' data-pv='" + r.pvValue + "' data-pv-apply='" + s.finalPv + "'>" +
             "<td>" + r.label + "</td>" +
             "<td class='num'><strong>" + money(r.epValue) + "</strong></td>" +
             "<td class='num'><strong>" + money(r.pvValue) + "</strong></td>" +
@@ -3116,7 +3139,9 @@
         var program = row.dataset.program || "";
         var term = row.dataset.term || "";
         var ep = num(row.dataset.ep);
-        var pv = num(row.dataset.pv);
+        var pvRaw = row.dataset.pvApply;
+        if (pvRaw === undefined || pvRaw === null || pvRaw === "") pvRaw = row.dataset.pv;
+        var pv = num(pvRaw);
         var allRows = row.closest("tbody").querySelectorAll("tr.apply-row");
         for (var i = 0; i < allRows.length; i++) allRows[i].classList.remove("active");
         row.classList.add("active");
