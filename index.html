@@ -132,6 +132,26 @@
       color:#061845;
       text-shadow:none;
     }
+    .rates-source {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:16px;
+      color:var(--ink-soft);
+      font-size:13px;
+    }
+    .rates-source.error { color:var(--bad); }
+    .rates-source button {
+      border:0;
+      padding:0;
+      background:none;
+      color:var(--acc2);
+      font:inherit;
+      font-weight:700;
+      text-decoration:underline;
+      cursor:pointer;
+    }
     .tabs {
       display:flex;
       gap:10px;
@@ -932,6 +952,10 @@
   <div class="page">
     <section class="hero">
       <h1>Калькулятор Формула</h1>
+      <div id="ratesSource" class="rates-source" aria-live="polite">
+        <span id="ratesStatus">Загружаем актуальные ставки...</span>
+        <button id="ratesRefresh" type="button">Обновить ставки</button>
+      </div>
     </section>
 
     <section class="tabs">
@@ -1168,14 +1192,28 @@
     </section>
   </div>
 
-  <script src="./mortgage_calculator_data.js?v=20260522_1"></script>
+  <script src="./calculator_rates.js"></script>
   <script>
-    (function () {
-      var data = window.MORTGAGE_CALC_DATA;
-      if (!data || !Array.isArray(data.rates)) {
-        document.body.innerHTML = "<div style='padding:20px;font-family:Manrope,sans-serif'>Не найден блок rates в mortgage_calculator_data.js</div>";
+    (async function () {
+      var sourceNode = document.getElementById("ratesSource");
+      var sourceText = document.getElementById("ratesStatus");
+      var runButtons = ["kcRun", "rvRun", "stRun"].map(function (id) { return document.getElementById(id); });
+      runButtons.forEach(function (button) { button.disabled = true; });
+      document.getElementById("ratesRefresh").addEventListener("click", function () {
+        window.location.reload();
+      });
+      var data;
+      try {
+        data = await window.FORMULA_RATES.loadRates();
+      } catch (error) {
+        sourceNode.classList.add("error");
+        sourceText.textContent = error.message;
+        ["kcStatus", "rvStatus", "stStatus"].forEach(function (id) {
+          document.getElementById(id).textContent = "Расчет недоступен: актуальные ставки не загружены.";
+        });
         return;
       }
+      runButtons.forEach(function (button) { button.disabled = false; });
 
       var YEARS = 30;
       var TOTAL_MONTHS = YEARS * 12;
@@ -2198,10 +2236,8 @@
       var allPrograms = uniq(rates.map(function (r) { return r.program; }));
       var allBanks = uniq(rates.map(function (r) { return r.bank; }));
       var allTerms = uniq(rates.map(function (r) { return r.discount_term; })).sort(function (a, b) { return termSort(a) - termSort(b); });
-      var ratesSourceEl = document.getElementById("ratesSource");
-      if (ratesSourceEl) {
-        ratesSourceEl.textContent = (data.sources && data.sources.rates_file) ? data.sources.rates_file : "Ставки 3.xlsx";
-      }
+      sourceText.textContent = data.source + ": " + rates.length + " ставок" +
+        (data.suspended ? " (приостановлено: " + data.suspended + ")" : "");
 
       function populateSelect(selectEl, values, allLabel) {
         var prev = selectedValues(selectEl);
